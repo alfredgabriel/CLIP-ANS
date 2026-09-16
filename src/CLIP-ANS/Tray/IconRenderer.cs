@@ -6,37 +6,20 @@ using QuizHelper.Models;
 namespace QuizHelper.Tray;
 
 /// <summary>
-/// Renders the tray icon as a geometric cloud shape in a given color.
+/// Renders the tray icon as a sleek, professional vector-styled clipboard badge.
 /// Supports:
 ///   - Single color (one answer)
 ///   - Blend (multiple answers → averaged RGB)
-///   - Special states: idle (white outline), querying (cyan pulse), error (gray + border)
+///   - Special states: idle (clean white outline on transparent), querying (cyan pulse), error (dim warning), paused (dark outline)
+/// Uses direct PNG-in-ICO streaming for 100% crystal-clear 32-bit ARGB transparency with zero GDI handle leaks.
 /// </summary>
 public static class IconRenderer
 {
     private const int Size = 32; // px
 
-    // Cloud shape as a polygon approximation (normalized 0-1, scaled to Size)
-    // Points describe a cloud outline going clockwise
-    private static readonly PointF[] CloudPoints =
-    [
-        // Bottom-left foot
-        new(0.05f, 0.85f), new(0.05f, 0.95f), new(0.95f, 0.95f), new(0.95f, 0.75f),
-        // Right bump
-        new(0.88f, 0.65f), new(0.92f, 0.55f), new(0.88f, 0.42f), new(0.75f, 0.38f),
-        // Top-right bump (big)
-        new(0.80f, 0.28f), new(0.78f, 0.18f), new(0.68f, 0.10f), new(0.55f, 0.10f),
-        new(0.44f, 0.14f), new(0.38f, 0.22f),
-        // Top-left bump (small)
-        new(0.30f, 0.16f), new(0.20f, 0.16f), new(0.12f, 0.22f), new(0.08f, 0.32f),
-        new(0.10f, 0.42f),
-        // Left side back to bottom
-        new(0.05f, 0.50f), new(0.03f, 0.62f), new(0.05f, 0.75f),
-    ];
-
     // ── Public API ────────────────────────────────────────────────────────────
 
-    /// <summary>Creates an icon for the idle/waiting state (white outline on transparent).</summary>
+    /// <summary>Creates an icon for the idle/waiting state (crisp white outline on transparent background).</summary>
     public static Icon CreateIdleIcon() =>
         RenderIcon(Color.Transparent, Color.White, filled: false);
 
@@ -59,15 +42,15 @@ public static class IconRenderer
         return CreateAnswerIcon(Color.FromArgb(255, r, g, b));
     }
 
-    /// <summary>Creates an icon for the querying state (cyan).</summary>
+    /// <summary>Creates an icon for the querying state (vibrant cyan).</summary>
     public static Icon CreateQueryingIcon() =>
-        RenderIcon(Color.FromArgb(0, 220, 220), Color.White, filled: true);
+        RenderIcon(Color.FromArgb(0, 225, 255), Color.White, filled: true);
 
     /// <summary>Creates an icon for the error/timeout state (dark gray with white border).</summary>
     public static Icon CreateErrorIcon() =>
-        RenderIcon(Color.FromArgb(60, 60, 60), Color.White, filled: true);
+        RenderIcon(Color.FromArgb(80, 80, 80), Color.FromArgb(255, 100, 100), filled: true);
 
-    /// <summary>Creates an icon for the paused state (dark gray outline).</summary>
+    /// <summary>Creates an icon for the paused state (dim gray outline).</summary>
     public static Icon CreatePausedIcon() =>
         RenderIcon(Color.Transparent, Color.FromArgb(120, 120, 120), filled: false);
 
@@ -80,38 +63,97 @@ public static class IconRenderer
 
         g.SmoothingMode      = SmoothingMode.AntiAlias;
         g.CompositingQuality = CompositingQuality.HighQuality;
+        g.InterpolationMode  = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode    = PixelOffsetMode.HighQuality;
         g.Clear(Color.Transparent);
 
-        // Scale points to bitmap size
-        var pts = ScalePoints(CloudPoints, Size, Size);
-
-        // Fill
-        if (filled && fillColor != Color.Transparent)
+        // 1. Clipboard main body (smooth rounded rectangle)
+        var bodyRect = new RectangleF(4.5f, 6.5f, 23f, 22f);
+        using (var bodyPath = CreateRoundedRectangle(bodyRect, 4f))
         {
-            using var fill = new SolidBrush(fillColor);
-            g.FillPolygon(fill, pts);
+            if (filled && fillColor != Color.Transparent)
+            {
+                using var fillBrush = new SolidBrush(fillColor);
+                g.FillPath(fillBrush, bodyPath);
+            }
+
+            using var outlinePen = new Pen(outlineColor, 1.8f);
+            g.DrawPath(outlinePen, bodyPath);
         }
 
-        // Outline (always drawn)
-        using var pen = new Pen(outlineColor, 1.5f);
-        g.DrawPolygon(pen, pts);
+        // 2. Top clip (rounded tab at center top)
+        var clipRect = new RectangleF(10.5f, 2.5f, 11f, 6f);
+        using (var clipPath = CreateRoundedRectangle(clipRect, 2f))
+        {
+            Color clipFill = filled && fillColor != Color.Transparent
+                ? fillColor
+                : Color.FromArgb(20, 24, 30);
+
+            using var clipBrush = new SolidBrush(clipFill);
+            g.FillPath(clipBrush, clipPath);
+
+            using var clipPen = new Pen(outlineColor, 1.4f);
+            g.DrawPath(clipPen, clipPath);
+        }
+
+        // 3. Central accent dot / check for idle or answer
+        if (!filled)
+        {
+            // Subtle inner line on idle
+            using var linePen = new Pen(Color.FromArgb(180, outlineColor), 1.2f);
+            g.DrawLine(linePen, 9f, 14f, 23f, 14f);
+            g.DrawLine(linePen, 9f, 18f, 19f, 18f);
+        }
 
         return BitmapToIcon(bmp);
     }
 
-    private static PointF[] ScalePoints(PointF[] normalized, int width, int height) =>
-        normalized.Select(p => new PointF(p.X * width, p.Y * height)).ToArray();
+    private static GraphicsPath CreateRoundedRectangle(RectangleF rect, float radius)
+    {
+        var path = new GraphicsPath();
+        float diameter = radius * 2;
+        path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
+        path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+        path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
 
-    /// <summary>Converts a Bitmap to a System.Drawing.Icon.</summary>
+    /// <summary>
+    /// Converts a 32-bit ARGB Bitmap to a System.Drawing.Icon using standard PNG-in-ICO format.
+    /// Preserves full subpixel alpha transparency and produces zero unmanaged handle leaks.
+    /// </summary>
     private static Icon BitmapToIcon(Bitmap bmp)
     {
-        using var ms = new System.IO.MemoryStream();
-        // Write ICO header manually for a single 32x32 image
-        bmp.Save(ms, ImageFormat.Png);
-        ms.Seek(0, System.IO.SeekOrigin.Begin);
-        // Use a handle-based approach for clean conversion
-        var hIcon = bmp.GetHicon();
-        return Icon.FromHandle(hIcon);
+        using var pngStream = new System.IO.MemoryStream();
+        bmp.Save(pngStream, ImageFormat.Png);
+        byte[] pngBytes = pngStream.ToArray();
+
+        using var icoStream = new System.IO.MemoryStream();
+        using var writer = new System.IO.BinaryWriter(icoStream);
+
+        // ICO Header (6 bytes): reserved=0, type=1 (ICO), count=1
+        writer.Write((ushort)0);
+        writer.Write((ushort)1);
+        writer.Write((ushort)1);
+
+        // Directory Entry (16 bytes)
+        writer.Write((byte)(bmp.Width >= 256 ? 0 : bmp.Width));
+        writer.Write((byte)(bmp.Height >= 256 ? 0 : bmp.Height));
+        writer.Write((byte)0);  // colors
+        writer.Write((byte)0);  // reserved
+        writer.Write((ushort)1); // color planes
+        writer.Write((ushort)32); // bits per pixel
+        writer.Write((uint)pngBytes.Length); // payload byte length
+        writer.Write((uint)22); // offset (6 + 16 = 22)
+
+        // PNG payload
+        writer.Write(pngBytes);
+        writer.Flush();
+
+        icoStream.Seek(0, System.IO.SeekOrigin.Begin);
+        return new Icon(icoStream);
     }
 
     /// <summary>

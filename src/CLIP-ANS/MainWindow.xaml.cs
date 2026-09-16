@@ -43,15 +43,15 @@ public partial class MainWindow : Window
     public event Action<AppConfig>? ConfigChanged;
 
     private readonly ConfigService _configService = new();
-    private AppConfig _config;
+    private AppConfig _config = new();
     private bool _apiKeyDirty;
     private bool _showingKey;
     private ObservableCollection<LegendItem> _legendItems = [];
 
     public MainWindow()
     {
-        InitializeComponent();
         _config = _configService.Load();
+        InitializeComponent();
         PopulateFromConfig();
         AppState.Instance.PropertyChanged += (_, e) =>
         {

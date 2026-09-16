@@ -30,7 +30,7 @@ public class AppConfig
 
     // ── Startup ──────────────────────────────────────────────────────────────
     [JsonPropertyName("show_window_on_start")]
-    public bool ShowWindowOnStart { get; set; } = false;
+    public bool ShowWindowOnStart { get; set; } = true;
 
     // ── Color map: letter (A-E) → hex color string ───────────────────────────
     [JsonPropertyName("color_map")]

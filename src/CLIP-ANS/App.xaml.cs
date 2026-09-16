@@ -24,28 +24,40 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
-        // 1. Load configuration
-        var config  = _configService.Load();
-        var state   = AppState.Instance;
-        state.Config = config;
+        try
+        {
+            // 1. Load configuration
+            var config  = _configService.Load();
+            var state   = AppState.Instance;
+            state.Config = config;
 
-        // 2. Create tray icon (always visible)
-        _tray = new TrayManager(state);
-        _tray.OpenRequested  += ShowMainWindow;
-        _tray.ExitRequested  += () => Shutdown();
-        _tray.PauseToggled   += paused => state.DetectionEnabled = !paused;
+            // 2. Create tray icon (always visible)
+            _tray = new TrayManager(state);
+            _tray.OpenRequested  += ShowMainWindow;
+            _tray.ExitRequested  += () => Shutdown();
+            _tray.PauseToggled   += paused => state.DetectionEnabled = !paused;
 
-        // 3. Create main window (hidden by default unless first run)
-        _mainWindow = new MainWindow();
-        _mainWindow.ConfigChanged += OnConfigChanged;
+            // 3. Create main window (hidden by default unless first run)
+            _mainWindow = new MainWindow();
+            _mainWindow.ConfigChanged += OnConfigChanged;
 
-        bool firstRun = !_configService.ConfigExists();
-        if (firstRun || config.ShowWindowOnStart)
-            ShowMainWindow();
+            bool firstRun = !_configService.ConfigExists();
+            if (firstRun || config.ShowWindowOnStart)
+                ShowMainWindow();
 
-        // 4. Initialize AI client and clipboard watcher
-        RebuildAIClient(config);
-        StartWatcher();
+            // 4. Initialize AI client and clipboard watcher
+            RebuildAIClient(config);
+            StartWatcher();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Error al iniciar CLIP-ANS:\n\n{ex.Message}\n\n{ex.StackTrace}",
+                "CLIP-ANS — Error de inicio",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown(1);
+        }
     }
 
     // ── Window management ─────────────────────────────────────────────────────
