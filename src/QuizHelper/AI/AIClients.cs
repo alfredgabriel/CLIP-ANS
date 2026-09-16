@@ -1,0 +1,105 @@
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+
+namespace QuizHelper.AI;
+
+/// <summary>
+/// Base class for OpenAI-compatible chat completion endpoints (Groq, OpenAI, etc.)
+/// </summary>
+public abstract class OpenAICompatibleClient : IAIClient
+{
+    protected abstract string EndpointUrl { get; }
+    protected abstract string ApiKey { get; }
+    protected abstract string Model { get; }
+    protected abstract int TimeoutSeconds { get; }
+
+    private static readonly HttpClient _http = new();
+
+    private const string SystemPrompt =
+        "Eres un asistente de examen. " +
+        "Dado un enunciado de pregunta tipo test con sus opciones, " +
+        "responde ÚNICAMENTE con la(s) letra(s) correcta(s) en mayúsculas, " +
+        "separadas por coma si hay más de una (ejemplo: B  o  A,C). " +
+        "Sin explicación. Sin puntuación extra. Solo las letras.";
+
+    public async Task<string> AskAsync(string questionText, CancellationToken ct = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
+
+        var payload = new
+        {
+            model    = Model,
+            messages = new[]
+            {
+                new { role = "system",  content = SystemPrompt },
+                new { role = "user",    content = questionText }
+            },
+            max_tokens  = 20,
+            temperature = 0.0
+        };
+
+        var json    = JsonSerializer.Serialize(payload);
+        var request = new HttpRequestMessage(HttpMethod.Post, EndpointUrl)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+        try
+        {
+            var response = await _http.SendAsync(request, cts.Token);
+            response.EnsureSuccessStatusCode();
+
+            var body     = await response.Content.ReadAsStringAsync(cts.Token);
+            var doc      = JsonDocument.Parse(body);
+            return doc.RootElement
+                      .GetProperty("choices")[0]
+                      .GetProperty("message")
+                      .GetProperty("content")
+                      .GetString() ?? string.Empty;
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new TimeoutException($"La IA no respondió en {TimeoutSeconds} segundos.");
+        }
+    }
+}
+
+// ── Groq ─────────────────────────────────────────────────────────────────────
+
+/// <summary>Groq AI client (OpenAI-compatible endpoint).</summary>
+public sealed class GroqClient : OpenAICompatibleClient
+{
+    protected override string EndpointUrl => "https://api.groq.com/openai/v1/chat/completions";
+    protected override string ApiKey { get; }
+    protected override string Model { get; }
+    protected override int TimeoutSeconds { get; }
+
+    public GroqClient(string apiKey, string model = "llama3-8b-8192", int timeoutSeconds = 8)
+    {
+        ApiKey         = apiKey;
+        Model          = model;
+        TimeoutSeconds = timeoutSeconds;
+    }
+}
+
+// ── OpenAI ────────────────────────────────────────────────────────────────────
+
+/// <summary>OpenAI client.</summary>
+public sealed class OpenAIClient : OpenAICompatibleClient
+{
+    protected override string EndpointUrl => "https://api.openai.com/v1/chat/completions";
+    protected override string ApiKey { get; }
+    protected override string Model { get; }
+    protected override int TimeoutSeconds { get; }
+
+    public OpenAIClient(string apiKey, string model = "gpt-4o-mini", int timeoutSeconds = 8)
+    {
+        ApiKey         = apiKey;
+        Model          = model;
+        TimeoutSeconds = timeoutSeconds;
+    }
+}
