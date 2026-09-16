@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using QuizHelper.Models;
@@ -7,13 +8,17 @@ namespace QuizHelper.Core;
 /// <summary>
 /// Background clipboard watcher. Polls the clipboard every <see cref="AppConfig.PollIntervalMs"/>
 /// milliseconds and fires <see cref="NewTextDetected"/> when a new, sufficiently long
-/// text is found. Applies a debounce before raising the event to avoid flooding the AI.
+/// text is found. Uses Windows GetClipboardSequenceNumber to reliably detect every copy event.
 /// </summary>
 public sealed class ClipboardWatcher : IDisposable
 {
+    [DllImport("user32.dll")]
+    private static extern uint GetClipboardSequenceNumber();
+
     private readonly AppState  _state;
     private readonly DebounceHelper _debounce = new();
     private System.Threading.Timer? _timer;
+    private uint _lastSequenceNumber;
     private string _lastHash = string.Empty;
     private bool _disposed;
 
@@ -29,6 +34,7 @@ public sealed class ClipboardWatcher : IDisposable
     public void Start()
     {
         var config = _state.Config ?? new AppConfig();
+        _lastSequenceNumber = GetClipboardSequenceNumber();
         _timer?.Dispose();
         _timer = new System.Threading.Timer(
             _ => Poll(),
@@ -52,11 +58,16 @@ public sealed class ClipboardWatcher : IDisposable
         if (_state.Config is null) return;
         if (!_state.DetectionEnabled) return;
 
+        // Check if clipboard changed in Windows
+        uint currentSeq = GetClipboardSequenceNumber();
+        if (currentSeq == _lastSequenceNumber && currentSeq != 0)
+            return;
+
         string text = string.Empty;
         try
         {
             // Clipboard must be read on an STA thread
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
             {
                 if (System.Windows.Clipboard.ContainsText())
                     text = System.Windows.Clipboard.GetText();
@@ -67,9 +78,11 @@ public sealed class ClipboardWatcher : IDisposable
         if (string.IsNullOrWhiteSpace(text)) return;
         if (text.Length < _state.Config.MinTextLength) return;
 
-        // Only trigger on new content
+        _lastSequenceNumber = currentSeq;
+
+        // Check content hash to avoid duplicate firing unless previous was error or idle
         var hash = ComputeHash(text);
-        if (hash == _lastHash) return;
+        if (hash == _lastHash && _state.Status == AppStatus.Answered) return;
         _lastHash = hash;
 
         // Debounce before firing

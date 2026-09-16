@@ -161,8 +161,8 @@
                     <StackPanel Orientation="Horizontal">
                         <Slider x:Name="MinLengthSlider"
                                 Width="240"
-                                Minimum="20" Maximum="500"
-                                Value="80"
+                                Minimum="10" Maximum="500"
+                                Value="20"
                                 TickFrequency="10"
                                 IsSnapToTickEnabled="True"
                                 ValueChanged="MinLengthSlider_Changed"
@@ -172,7 +172,7 @@
                                    Style="{StaticResource ValueText}"
                                    Margin="14,0,0,0"
                                    VerticalAlignment="Center"
-                                   Text="80 chars"/>
+                                   Text="20 chars"/>
                     </StackPanel>
 
                     <!-- Debounce -->

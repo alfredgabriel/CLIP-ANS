@@ -20,7 +20,7 @@ public class AppConfig
 
     // ── Detection behaviour ──────────────────────────────────────────────────
     [JsonPropertyName("min_text_length")]
-    public int MinTextLength { get; set; } = 80;
+    public int MinTextLength { get; set; } = 20;
 
     [JsonPropertyName("debounce_ms")]
     public int DebounceMs { get; set; } = 400;
