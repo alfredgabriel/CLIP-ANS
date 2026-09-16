@@ -561,6 +561,25 @@ public partial class MainWindow : Window
         UpdateStatusChip();
     }
 
+    private void CopyLastAnswerBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var text = AppState.Instance.IsDirectAnswer
+            ? AppState.Instance.LastDirectAnswer
+            : AppState.Instance.LastAnswerDisplay;
+
+        if (!string.IsNullOrWhiteSpace(text) && text != "—")
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+                System.Windows.MessageBox.Show(
+                    "Respuesta copiada al portapapeles.",
+                    "CLIP-ANS", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch { }
+        }
+    }
+
     // ── Event handlers — Save ─────────────────────────────────────────────────
 
     private void SaveConfigBtn_Click(object sender, RoutedEventArgs e)

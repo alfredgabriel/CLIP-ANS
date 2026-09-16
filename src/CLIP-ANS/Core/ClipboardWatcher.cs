@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -10,7 +11,7 @@ namespace QuizHelper.Core;
 /// Background clipboard watcher. Polls the clipboard every <see cref="AppConfig.PollIntervalMs"/>
 /// milliseconds and fires <see cref="NewTextDetected"/> when:
 /// - A new, sufficiently long text is found (normal text copy), OR
-/// - A new image is detected and OCR extracts enough text from it (screenshot detection).
+/// - A new image is detected (Win+Shift+S, Snipping Tool, screenshot) and OCR extracts enough text from it.
 /// Uses Windows GetClipboardSequenceNumber to reliably detect every copy event.
 /// </summary>
 public sealed class ClipboardWatcher : IDisposable
@@ -66,30 +67,64 @@ public sealed class ClipboardWatcher : IDisposable
         if (currentSeq == _lastSequenceNumber && currentSeq != 0)
             return;
 
-        _lastSequenceNumber = currentSeq;
-
-        bool hasText  = false;
-        bool hasImage = false;
-        string text   = string.Empty;
-        BitmapSource? bitmapSource = null;
-
-        try
-        {
-            System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
-            {
-                hasText  = System.Windows.Clipboard.ContainsText();
-                hasImage = System.Windows.Clipboard.ContainsImage();
-
-                if (hasText)
-                    text = System.Windows.Clipboard.GetText();
-
-                if (hasImage && !hasText)
-                    bitmapSource = System.Windows.Clipboard.GetImage();
-            });
-        }
-        catch { return; }
-
         var config = _state.Config;
+        string text = string.Empty;
+        byte[]? imageBytes = null;
+
+        // Try reading clipboard with retries in case Snipping Tool (Win+Shift+S) or another app has locked it
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            try
+            {
+                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    // 1. Check text
+                    if (System.Windows.Clipboard.ContainsText())
+                    {
+                        text = System.Windows.Clipboard.GetText();
+                    }
+
+                    // 2. Check image if no text or screenshot detection is active
+                    if (string.IsNullOrWhiteSpace(text) && config.DetectScreenshots)
+                    {
+                        // Prefer WinForms Clipboard — handles Snipping Tool GDI+ DIB/Bitmap natively without COM thread issues
+                        if (System.Windows.Forms.Clipboard.ContainsImage())
+                        {
+                            using var gdiImg = System.Windows.Forms.Clipboard.GetImage();
+                            if (gdiImg != null)
+                            {
+                                using var ms = new MemoryStream();
+                                gdiImg.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                                imageBytes = ms.ToArray();
+                            }
+                        }
+                        // Fallback to WPF Clipboard if needed
+                        if (imageBytes == null && System.Windows.Clipboard.ContainsImage())
+                        {
+                            var wpfImg = System.Windows.Clipboard.GetImage();
+                            if (wpfImg != null)
+                            {
+                                var encoder = new PngBitmapEncoder();
+                                encoder.Frames.Add(BitmapFrame.Create(wpfImg));
+                                using var ms = new MemoryStream();
+                                encoder.Save(ms);
+                                imageBytes = ms.ToArray();
+                            }
+                        }
+                    }
+                });
+
+                if (!string.IsNullOrWhiteSpace(text) || imageBytes != null)
+                    break;
+            }
+            catch
+            {
+                // Clipboard temporarily locked by screenshot tool writing data
+                Thread.Sleep(75);
+            }
+        }
+
+        _lastSequenceNumber = currentSeq;
 
         // ── Text path ────────────────────────────────────────────────────────
         if (!string.IsNullOrWhiteSpace(text) && text.Length >= config.MinTextLength)
@@ -107,9 +142,9 @@ public sealed class ClipboardWatcher : IDisposable
         }
 
         // ── Image/screenshot path ────────────────────────────────────────────
-        if (config.DetectScreenshots && bitmapSource != null)
+        if (config.DetectScreenshots && imageBytes != null && imageBytes.Length > 0)
         {
-            var bmpHash = OcrHelper.HashBitmap(bitmapSource);
+            var bmpHash = Convert.ToHexString(SHA256.HashData(imageBytes));
             if (bmpHash == _lastHash) return;
             _lastHash = bmpHash;
 
@@ -117,7 +152,7 @@ public sealed class ClipboardWatcher : IDisposable
             {
                 try
                 {
-                    var ocrText = await OcrHelper.RecognizeTextAsync(bitmapSource);
+                    var ocrText = await OcrHelper.RecognizeTextAsync(imageBytes);
                     if (string.IsNullOrWhiteSpace(ocrText) || ocrText.Length < config.MinTextLength)
                         return;
 

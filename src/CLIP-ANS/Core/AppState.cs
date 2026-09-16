@@ -127,9 +127,7 @@ public class AppState : INotifyPropertyChanged
         get
         {
             if (_isDirectAnswer)
-                return _lastDirectAnswer.Length > 60
-                    ? _lastDirectAnswer[..60] + "…"
-                    : _lastDirectAnswer;
+                return string.IsNullOrWhiteSpace(_lastDirectAnswer) ? "—" : _lastDirectAnswer;
             return _lastAnswers.Count > 0
                 ? string.Join(", ", _lastAnswers)
                 : "—";

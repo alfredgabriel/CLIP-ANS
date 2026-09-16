@@ -23,13 +23,13 @@ public abstract class OpenAICompatibleClient : IAIClient
 
     private const string SystemPrompt =
         "Eres un asistente de examen experto y ultra-preciso. Sigue estas reglas ESTRICTAMENTE:\n" +
-        "CASO 1 — PREGUNTA TIPO TEST (hay opciones A, B, C, D… o una lista numerada/con viñetas de opciones):\n" +
+        "CASO 1 — PREGUNTA TIPO TEST (hay opciones A, B, C, D… o una lista de alternativas):\n" +
         "  - Si las opciones van precedidas de letras (A, B, C, D, E, F…), responde SOLO con esa(s) letra(s) mayúscula(s) separadas por coma si son varias. Ejemplo: A  /  A,C  /  B,D,F\n" +
         "  - Si las opciones NO van precedidas de letras pero hay una lista de alternativas, asume A=1ª, B=2ª, C=3ª, D=4ª, E=5ª, F=6ª y responde igual.\n" +
         "  - PROHIBIDO cualquier palabra, explicación o puntuación extra.\n" +
-        "CASO 2 — PREGUNTA ABIERTA / DE ESCRIBIR (no hay opciones alternativas):\n" +
-        "  - Responde con el prefijo exacto 'RESPUESTA: ' seguido de la respuesta concisa y directa (máximo 2 frases o el dato clave).\n" +
-        "  - Ejemplo: RESPUESTA: París  /  RESPUESTA: La fotosíntesis convierte luz solar en glucosa.\n" +
+        "CASO 2 — PREGUNTA ABIERTA / DE DESARROLLO / DE ESCRIBIR (no hay opciones alternativas):\n" +
+        "  - Responde con el prefijo exacto 'RESPUESTA: ' seguido de la respuesta completa, explicada y desarrollada con la profundidad necesaria para responder de forma precisa y total a la pregunta.\n" +
+        "  - NO limites artificialmente la respuesta si la pregunta requiere una explicación o detalle para ser correcta.\n" +
         "REGLA GLOBAL: nunca mezcles ambos formatos. Elige el caso correcto y responde únicamente en ese formato.";
 
     private static bool IsTokenOrRateLimitError(int statusCode, string message)
@@ -78,7 +78,7 @@ public abstract class OpenAICompatibleClient : IAIClient
                         new { role = "system",  content = SystemPrompt },
                         new { role = "user",    content = questionText }
                     },
-                    max_tokens  = 150,
+                    max_tokens  = 1000,
                     temperature = 0.0
                 };
 

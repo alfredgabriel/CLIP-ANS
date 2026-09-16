@@ -1,11 +1,8 @@
 using System.IO;
 using System.Security.Cryptography;
-using System.Windows.Media.Imaging;
-using WinBitmapDecoder = Windows.Graphics.Imaging.BitmapDecoder;
-using WinBitmapFrame   = Windows.Graphics.Imaging.BitmapFrame;
-using WinSoftwareBitmap = Windows.Graphics.Imaging.SoftwareBitmap;
-using WinBitmapPixelFormat = Windows.Graphics.Imaging.BitmapPixelFormat;
-using WinBitmapAlphaMode   = Windows.Graphics.Imaging.BitmapAlphaMode;
+using Windows.Graphics.Imaging;
+using Windows.Media.Ocr;
+using Windows.Storage.Streams;
 
 namespace QuizHelper.Core;
 
@@ -16,51 +13,65 @@ namespace QuizHelper.Core;
 /// </summary>
 public static class OcrHelper
 {
-    private static Windows.Media.Ocr.OcrEngine? _engine;
+    private static OcrEngine? _engine;
+    private static readonly object _engineLock = new();
 
-    private static Windows.Media.Ocr.OcrEngine? GetEngine()
+    private static OcrEngine? GetEngine()
     {
         if (_engine != null) return _engine;
 
-        var langs = Windows.Media.Ocr.OcrEngine.AvailableRecognizerLanguages;
-        var lang  = langs.FirstOrDefault(l => l.LanguageTag.StartsWith("es", StringComparison.OrdinalIgnoreCase))
-                 ?? langs.FirstOrDefault()
-                 ?? new Windows.Globalization.Language("en-US");
+        lock (_engineLock)
+        {
+            if (_engine != null) return _engine;
 
-        try { _engine = Windows.Media.Ocr.OcrEngine.TryCreateFromLanguage(lang); }
-        catch { _engine = null; }
+            try
+            {
+                _engine = OcrEngine.TryCreateFromUserProfileLanguages();
+            }
+            catch { }
+
+            if (_engine == null)
+            {
+                var langs = OcrEngine.AvailableRecognizerLanguages;
+                var lang  = langs.FirstOrDefault(l => l.LanguageTag.StartsWith("es", StringComparison.OrdinalIgnoreCase))
+                         ?? langs.FirstOrDefault();
+                if (lang != null)
+                {
+                    try { _engine = OcrEngine.TryCreateFromLanguage(lang); }
+                    catch { }
+                }
+            }
+        }
+
         return _engine;
     }
 
     /// <summary>
-    /// Recognises text in the given WPF BitmapSource (from clipboard).
+    /// Recognises text in the given PNG/JPEG image bytes.
     /// Returns the full concatenated OCR text, or null if recognition is unavailable.
     /// </summary>
-    public static async Task<string?> RecognizeTextAsync(BitmapSource bitmapSource)
+    public static async Task<string?> RecognizeTextAsync(byte[] imageBytes)
     {
+        if (imageBytes == null || imageBytes.Length == 0) return null;
+
         var engine = GetEngine();
         if (engine == null) return null;
 
         try
         {
-            // Convert WPF BitmapSource → PNG bytes → Windows SoftwareBitmap
-            byte[] pngBytes;
-            using (var ms = new MemoryStream())
+            using var ras = new InMemoryRandomAccessStream();
+            using (var writer = new DataWriter(ras))
             {
-                var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmapSource));
-                encoder.Save(ms);
-                pngBytes = ms.ToArray();
+                writer.WriteBytes(imageBytes);
+                await writer.StoreAsync();
+                await writer.FlushAsync();
+                writer.DetachStream();
             }
+            ras.Seek(0);
 
-            WinSoftwareBitmap softBmp;
-            using (var inMs = new MemoryStream(pngBytes))
-            {
-                var raStream = inMs.AsRandomAccessStream();
-                var decoder  = await WinBitmapDecoder.CreateAsync(raStream);
-                softBmp = await decoder.GetSoftwareBitmapAsync(
-                    WinBitmapPixelFormat.Bgra8, WinBitmapAlphaMode.Premultiplied);
-            }
+            var decoder = await BitmapDecoder.CreateAsync(ras);
+            var softBmp = await decoder.GetSoftwareBitmapAsync(
+                BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied);
 
             var ocrResult = await engine.RecognizeAsync(softBmp);
             if (ocrResult == null) return null;
@@ -74,19 +85,5 @@ public static class OcrHelper
         {
             return null;
         }
-    }
-
-    /// <summary>Returns a SHA-256 hash of the bitmap pixels for deduplication.</summary>
-    public static string HashBitmap(BitmapSource bitmapSource)
-    {
-        try
-        {
-            using var ms = new MemoryStream();
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmapSource));
-            encoder.Save(ms);
-            return Convert.ToHexString(SHA256.HashData(ms.ToArray()));
-        }
-        catch { return string.Empty; }
     }
 }

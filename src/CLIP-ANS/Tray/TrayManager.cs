@@ -81,6 +81,13 @@ public sealed class TrayManager : IDisposable
                     tip = ("CLIP-ANS: " + answer).Length > 63
                         ? ("CLIP-ANS: " + answer)[..63]
                         : "CLIP-ANS: " + answer;
+
+                    // Show balloon tip so the user can read the full answer right away
+                    if (!string.IsNullOrWhiteSpace(answer))
+                    {
+                        var balloon = answer.Length > 250 ? answer[..250] + "…" : answer;
+                        _notifyIcon.ShowBalloonTip(4000, "CLIP-ANS — Respuesta", balloon, ToolTipIcon.Info);
+                    }
                 }
                 else
                 {
@@ -145,6 +152,47 @@ public sealed class TrayManager : IDisposable
         menu.Font      = new Font("Consolas", 9f, FontStyle.Regular);
         menu.Renderer  = new BrutalistMenuRenderer();
 
+        var itemCopy = new ToolStripMenuItem("📋 COPIAR RESPUESTA")
+        {
+            ForeColor = Color.FromArgb(0, 230, 255),
+            Font      = new Font("Consolas", 9f, FontStyle.Bold),
+            Enabled   = false,
+        };
+        itemCopy.Click += (_, _) =>
+        {
+            var answerToCopy = _state.IsDirectAnswer
+                ? _state.LastDirectAnswer
+                : _state.LastAnswerDisplay;
+
+            if (!string.IsNullOrWhiteSpace(answerToCopy) && answerToCopy != "—")
+            {
+                try
+                {
+                    Clipboard.SetText(answerToCopy);
+                    _notifyIcon.ShowBalloonTip(2000, "CLIP-ANS", "✓ Respuesta copiada al portapapeles", ToolTipIcon.None);
+                }
+                catch { }
+            }
+        };
+
+        menu.Opening += (_, _) =>
+        {
+            var hasAnswer = (_state.IsDirectAnswer && !string.IsNullOrWhiteSpace(_state.LastDirectAnswer))
+                         || (!_state.IsDirectAnswer && _state.LastAnswers.Count > 0);
+            itemCopy.Enabled = hasAnswer;
+            if (hasAnswer)
+            {
+                var preview = _state.IsDirectAnswer
+                    ? (_state.LastDirectAnswer.Length > 18 ? _state.LastDirectAnswer[..18] + "…" : _state.LastDirectAnswer)
+                    : string.Join(",", _state.LastAnswers);
+                itemCopy.Text = $"📋 COPIAR RESPUESTA ({preview})";
+            }
+            else
+            {
+                itemCopy.Text = "📋 COPIAR RESPUESTA";
+            }
+        };
+
         var itemOpen = new ToolStripMenuItem("ABRIR")
         {
             ForeColor = Color.White,
@@ -162,7 +210,8 @@ public sealed class TrayManager : IDisposable
             PauseToggled?.Invoke(!_state.DetectionEnabled);
         };
 
-        var sep = new ToolStripSeparator();
+        var sepCopy = new ToolStripSeparator();
+        var sep     = new ToolStripSeparator();
 
         var itemExit = new ToolStripMenuItem("SALIR")
         {
@@ -170,7 +219,7 @@ public sealed class TrayManager : IDisposable
         };
         itemExit.Click += (_, _) => ExitRequested?.Invoke();
 
-        menu.Items.AddRange([itemOpen, itemPause, sep, itemExit]);
+        menu.Items.AddRange([itemCopy, sepCopy, itemOpen, itemPause, sep, itemExit]);
         _notifyIcon.ContextMenuStrip = menu;
     }
 

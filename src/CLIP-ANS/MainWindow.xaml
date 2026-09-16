@@ -290,15 +290,35 @@
                                        Text="{Binding StatusText, Mode=OneWay}"
                                        DataContext="{x:Static local:AppStateProxy.Instance}"/>
                         </Grid>
-                        <TextBlock x:Name="LastAnswerLabel"
-                                   Style="{StaticResource ValueText}"
-                                   Margin="0,6,0,0"
-                                   FontSize="12"
-                                   Foreground="#CCCCCC"
-                                   Text="{Binding LastAnswerDisplay, StringFormat='Última respuesta: \{0\}',
-                                                  Mode=OneWay,
-                                                  FallbackValue='Última respuesta: —'}"
-                                   DataContext="{x:Static local:AppStateProxy.Instance}"/>
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ScrollViewer Grid.Column="0"
+                                          MaxHeight="80"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <TextBlock x:Name="LastAnswerLabel"
+                                           Style="{StaticResource ValueText}"
+                                           FontSize="12"
+                                           Foreground="#CCCCCC"
+                                           TextWrapping="Wrap"
+                                           Text="{Binding LastAnswerDisplay, StringFormat='Última respuesta: \{0\}',
+                                                          Mode=OneWay,
+                                                          FallbackValue='Última respuesta: —'}"
+                                           DataContext="{x:Static local:AppStateProxy.Instance}"/>
+                            </ScrollViewer>
+                            <Button Grid.Column="1"
+                                    Content="📋 COPIAR"
+                                    Style="{StaticResource BrutalistButton}"
+                                    Padding="8,3"
+                                    FontSize="10"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Top"
+                                    Click="CopyLastAnswerBtn_Click"
+                                    ToolTip="Copiar respuesta completa al portapapeles"/>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
