@@ -163,15 +163,15 @@ public sealed class GroqClient : OpenAICompatibleClient
 
     public static readonly string[] DefaultGroqModels =
     [
-        "llama-3.3-70b-versatile",
-        "deepseek-r1-distill-llama-70b",
+        "llama3-70b-8192",
+        "meta-llama/llama-4-scout-17b-16e-instruct",
         "llama-3.1-8b-instant"
     ];
 
     public GroqClient(string apiKey, string model = "llama-3.3-70b-versatile", int timeoutSeconds = 8, IEnumerable<string>? candidateModels = null)
     {
         ApiKey          = apiKey;
-        Model           = string.IsNullOrWhiteSpace(model) ? "llama-3.3-70b-versatile" : model;
+        Model           = string.IsNullOrWhiteSpace(model) ? "llama3-70b-8192" : model;
         TimeoutSeconds  = timeoutSeconds;
         CandidateModels = (candidateModels != null && candidateModels.Any())
             ? candidateModels.Distinct().ToList()

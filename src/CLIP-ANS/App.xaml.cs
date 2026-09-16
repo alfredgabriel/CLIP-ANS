@@ -66,6 +66,8 @@ public partial class App : System.Windows.Application
             // 4. Initialize AI client and clipboard watcher
             RebuildAIClient(config);
             StartWatcher();
+            // 5. Silent startup connection check (auto-fixes stale model without user action)
+            _ = StartupConnectionCheckAsync(config);
         }
         catch (Exception ex)
         {
@@ -107,6 +109,99 @@ public partial class App : System.Windows.Application
     }
 
     // ── AI client factory ─────────────────────────────────────────────────────
+
+    // ── Startup auto-connection check ─────────────────────────────────────────
+
+    /// <summary>
+    /// Runs silently after startup. If the saved model is decommissioned,
+    /// fetches live models from the provider API and auto-switches to the
+    /// first available one, saving the config without user intervention.
+    /// </summary>
+    private async Task StartupConnectionCheckAsync(AppConfig config)
+    {
+        // Wait a moment so the UI finishes loading and network is ready
+        await Task.Delay(3000);
+
+        if (_aiClient is null) return;
+
+        try
+        {
+            // Try a minimal test prompt
+            await _aiClient.AskAsync(
+                "Pregunta: ¿Cuál es la capital de Francia?\nA) Madrid\nB) París\nC) Roma\nD) Berlín",
+                CancellationToken.None);
+            // Success — model is working fine, nothing to do
+        }
+        catch (Exception ex)
+        {
+            var msg = ex.Message.ToLowerInvariant();
+            bool isModelError = msg.Contains("does not exist") ||
+                                msg.Contains("not found")     ||
+                                msg.Contains("decommissioned")  ||
+                                msg.Contains("model_not_found");
+
+            if (!isModelError) return; // network error etc — don't touch config
+
+            // Try to get live model list and pick the first one that works
+            try
+            {
+                var apiKey = _configService.LoadApiKey(config.Provider);
+                if (string.IsNullOrWhiteSpace(apiKey)) return;
+
+                using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                using var req  = new System.Net.Http.HttpRequestMessage(
+                    System.Net.Http.HttpMethod.Get,
+                    config.Provider.ToLowerInvariant() == "openai"
+                        ? "https://api.openai.com/v1/models"
+                        : "https://api.groq.com/openai/v1/models");
+                req.Headers.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+                var resp = await http.SendAsync(req);
+                if (!resp.IsSuccessStatusCode) return;
+
+                var body = await resp.Content.ReadAsStringAsync();
+                using var doc = System.Text.Json.JsonDocument.Parse(body);
+
+                var liveModels = new List<string>();
+                if (doc.RootElement.TryGetProperty("data", out var data))
+                {
+                    foreach (var el in data.EnumerateArray())
+                    {
+                        if (el.TryGetProperty("id", out var idProp))
+                        {
+                            var id = idProp.GetString();
+                            if (!string.IsNullOrEmpty(id)         &&
+                                !id.Contains("whisper")            &&
+                                !id.Contains("tts")                &&
+                                !id.Contains("guard")              &&
+                                !id.Contains("embed")              &&
+                                !id.Contains("bge"))
+                                liveModels.Add(id);
+                        }
+                    }
+                }
+
+                if (liveModels.Count == 0) return;
+
+                // Pick the first live model, save and rebuild client
+                var newModel = liveModels[0];
+                Dispatcher.Invoke(() =>
+                {
+                    config.Model = newModel;
+                    _configService.Save(config);
+                    AppState.Instance.Config = config;
+                    RebuildAIClient(config);
+                    _mainWindow?.UpdateSelectedModel(newModel);
+                    System.Diagnostics.Debug.WriteLine($"[CLIP-ANS] Startup auto-switch: modelo cambiado a {newModel}");
+                });
+            }
+            catch (Exception innerEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[CLIP-ANS] StartupConnectionCheck fetch error: {innerEx.Message}");
+            }
+        }
+    }
 
     private void RebuildAIClient(AppConfig config)
     {
