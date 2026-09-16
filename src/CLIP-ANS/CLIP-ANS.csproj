@@ -15,8 +15,7 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <Platforms>AnyCPU</Platforms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- Set app icon only when the file exists (added by setup.ps1 or commit 5) -->
-    <ApplicationIcon Condition="Exists('Resources\app_icon.ico')">Resources\app_icon.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\app_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -30,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Resources\app_icon.ico" Condition="Exists('Resources\app_icon.ico')" />
+    <Resource Include="Resources\app_icon.ico" />
   </ItemGroup>
 
 </Project>

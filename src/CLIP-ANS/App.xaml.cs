@@ -89,11 +89,29 @@ public partial class App : System.Windows.Application
         var apiKey = _configService.LoadApiKey(config.Provider);
         if (string.IsNullOrWhiteSpace(apiKey)) return;
 
+        var candidates = AppConfig.ProviderModels.TryGetValue(config.Provider.ToLowerInvariant(), out var m) ? m : null;
+
         _aiClient = config.Provider.ToLowerInvariant() switch
         {
-            "openai" => new OpenAIClient(apiKey, config.Model, config.TimeoutSeconds),
-            _        => new GroqClient(apiKey, config.Model, config.TimeoutSeconds),
+            "openai" => new OpenAIClient(apiKey, config.Model, config.TimeoutSeconds, candidates),
+            _        => new GroqClient(apiKey, config.Model, config.TimeoutSeconds, candidates),
         };
+
+        _aiClient.ModelAutoSwitched += OnModelAutoSwitched;
+    }
+
+    private void OnModelAutoSwitched(string newModel)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (AppState.Instance.Config is { } cfg)
+            {
+                cfg.Model = newModel;
+                _configService.Save(cfg);
+            }
+            _mainWindow?.UpdateSelectedModel(newModel);
+            AppState.Instance.LastErrorMessage = $"Tokens agotados: cambiado a {newModel}";
+        });
     }
 
     // ── Clipboard watcher ─────────────────────────────────────────────────────

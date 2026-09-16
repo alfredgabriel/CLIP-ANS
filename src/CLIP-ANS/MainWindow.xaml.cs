@@ -122,6 +122,12 @@ public partial class MainWindow : Window
         }
     }
 
+    public void UpdateSelectedModel(string newModel)
+    {
+        _config.Model = newModel;
+        SelectModelInCombo(newModel);
+    }
+
     private void BuildLegendItems()
     {
         _legendItems = [];

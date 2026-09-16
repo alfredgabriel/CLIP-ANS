@@ -12,8 +12,12 @@ public abstract class OpenAICompatibleClient : IAIClient
 {
     protected abstract string EndpointUrl { get; }
     protected abstract string ApiKey { get; }
-    protected abstract string Model { get; }
+    public string Model { get; protected set; } = string.Empty;
+    public string CurrentModel => Model;
+    public IReadOnlyList<string> CandidateModels { get; protected set; } = [];
     protected abstract int TimeoutSeconds { get; }
+
+    public event Action<string>? ModelAutoSwitched;
 
     private static readonly HttpClient _http = new();
 
@@ -24,100 +28,179 @@ public abstract class OpenAICompatibleClient : IAIClient
         "2. Responde ÚNICAMENTE con la(s) letra(s) mayúscula(s) correcta(s) (ejemplo: A o B o A,C). " +
         "3. PROHIBIDO dar explicaciones, texto adicional o palabras. Responde EXCLUSIVAMENTE con la(s) letra(s).";
 
+    private static bool IsTokenOrRateLimitError(int statusCode, string message)
+    {
+        if (statusCode == 429) return true;
+        var lower = message.ToLowerInvariant();
+        return lower.Contains("rate limit") ||
+               lower.Contains("rate_limit") ||
+               lower.Contains("token") ||
+               lower.Contains("tpm") ||
+               lower.Contains("rpm") ||
+               lower.Contains("quota") ||
+               lower.Contains("insufficient_quota") ||
+               lower.Contains("capacity") ||
+               lower.Contains("overloaded") ||
+               lower.Contains("decommissioned") ||
+               lower.Contains("not found") ||
+               lower.Contains("model_not_found");
+    }
+
     public async Task<string> AskAsync(string questionText, CancellationToken ct = default)
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
-
-        var payload = new
+        // Build candidate list prioritizing the current active Model
+        var modelsToTry = new List<string> { Model };
+        foreach (var m in CandidateModels)
         {
-            model    = Model,
-            messages = new[]
+            if (!string.IsNullOrWhiteSpace(m) && !modelsToTry.Contains(m))
+                modelsToTry.Add(m);
+        }
+
+        string lastError = "Error desconocido al consultar la IA";
+
+        for (int i = 0; i < modelsToTry.Count; i++)
+        {
+            var attemptModel = modelsToTry[i];
+            try
             {
-                new { role = "system",  content = SystemPrompt },
-                new { role = "user",    content = questionText }
-            },
-            max_tokens  = 150,
-            temperature = 0.0
-        };
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
 
-        var json    = JsonSerializer.Serialize(payload);
-        var request = new HttpRequestMessage(HttpMethod.Post, EndpointUrl)
-        {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
-
-        try
-        {
-            var response = await _http.SendAsync(request, cts.Token);
-            var body     = await response.Content.ReadAsStringAsync(cts.Token);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                string errorMsg = $"HTTP {(int)response.StatusCode}";
-                try
+                var payload = new
                 {
-                    using var errDoc = JsonDocument.Parse(body);
-                    if (errDoc.RootElement.TryGetProperty("error", out var errObj) &&
-                        errObj.TryGetProperty("message", out var msgProp))
+                    model    = attemptModel,
+                    messages = new[]
                     {
-                        errorMsg = msgProp.GetString() ?? errorMsg;
+                        new { role = "system",  content = SystemPrompt },
+                        new { role = "user",    content = questionText }
+                    },
+                    max_tokens  = 150,
+                    temperature = 0.0
+                };
+
+                var json    = JsonSerializer.Serialize(payload);
+                var request = new HttpRequestMessage(HttpMethod.Post, EndpointUrl)
+                {
+                    Content = new StringContent(json, Encoding.UTF8, "application/json")
+                };
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
+                var response = await _http.SendAsync(request, cts.Token);
+                var body     = await response.Content.ReadAsStringAsync(cts.Token);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string errorMsg = $"HTTP {(int)response.StatusCode}";
+                    try
+                    {
+                        using var errDoc = JsonDocument.Parse(body);
+                        if (errDoc.RootElement.TryGetProperty("error", out var errObj) &&
+                            errObj.TryGetProperty("message", out var msgProp))
+                        {
+                            errorMsg = msgProp.GetString() ?? errorMsg;
+                        }
                     }
+                    catch { /* fallback to status code */ }
+
+                    lastError = errorMsg;
+
+                    // If rate limit / tokens exhausted and we have more candidates, switch automatically!
+                    if (IsTokenOrRateLimitError((int)response.StatusCode, errorMsg) && i + 1 < modelsToTry.Count)
+                    {
+                        var nextModel = modelsToTry[i + 1];
+                        System.Diagnostics.Debug.WriteLine($"[CLIP-ANS] Modelo {attemptModel} sin tokens/límite alcanzado ({errorMsg}). Cambiando a: {nextModel}");
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(errorMsg);
                 }
-                catch { /* fallback to status code */ }
 
-                throw new InvalidOperationException(errorMsg);
+                var doc = JsonDocument.Parse(body);
+                var msg = doc.RootElement.GetProperty("choices")[0].GetProperty("message");
+                string content = msg.TryGetProperty("content", out var cProp) ? cProp.GetString() ?? string.Empty : string.Empty;
+                if (string.IsNullOrWhiteSpace(content) && msg.TryGetProperty("reasoning", out var rProp))
+                {
+                    content = rProp.GetString() ?? string.Empty;
+                }
+
+                // If we successfully used a fallback model, update current model and notify!
+                if (attemptModel != Model)
+                {
+                    Model = attemptModel;
+                    ModelAutoSwitched?.Invoke(attemptModel);
+                }
+
+                return content;
             }
-
-            var doc = JsonDocument.Parse(body);
-            var msg = doc.RootElement.GetProperty("choices")[0].GetProperty("message");
-            string content = msg.TryGetProperty("content", out var cProp) ? cProp.GetString() ?? string.Empty : string.Empty;
-            if (string.IsNullOrWhiteSpace(content) && msg.TryGetProperty("reasoning", out var rProp))
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
-                content = rProp.GetString() ?? string.Empty;
+                if (i + 1 < modelsToTry.Count) continue;
+                throw new TimeoutException($"La IA no respondió en {TimeoutSeconds} segundos.");
             }
-            return content;
+            catch (Exception ex) when (i + 1 < modelsToTry.Count && IsTokenOrRateLimitError(0, ex.Message))
+            {
+                lastError = ex.Message;
+                continue;
+            }
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            throw new TimeoutException($"La IA no respondió en {TimeoutSeconds} segundos.");
-        }
+
+        throw new InvalidOperationException(lastError);
     }
 }
 
 // ── Groq ─────────────────────────────────────────────────────────────────────
 
-/// <summary>Groq AI client (OpenAI-compatible endpoint).</summary>
+/// <summary>Groq AI client (OpenAI-compatible endpoint) with auto-failover on token exhaustion.</summary>
 public sealed class GroqClient : OpenAICompatibleClient
 {
     protected override string EndpointUrl => "https://api.groq.com/openai/v1/chat/completions";
     protected override string ApiKey { get; }
-    protected override string Model { get; }
     protected override int TimeoutSeconds { get; }
 
-    public GroqClient(string apiKey, string model = "qwen/qwen3.8-27b", int timeoutSeconds = 8)
+    public static readonly string[] DefaultGroqModels =
+    [
+        "qwen/qwen3.8-27b",
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "groq/compound-mini",
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant"
+    ];
+
+    public GroqClient(string apiKey, string model = "qwen/qwen3.8-27b", int timeoutSeconds = 8, IEnumerable<string>? candidateModels = null)
     {
-        ApiKey         = apiKey;
-        Model          = model;
-        TimeoutSeconds = timeoutSeconds;
+        ApiKey          = apiKey;
+        Model           = string.IsNullOrWhiteSpace(model) ? "qwen/qwen3.8-27b" : model;
+        TimeoutSeconds  = timeoutSeconds;
+        CandidateModels = (candidateModels != null && candidateModels.Any())
+            ? candidateModels.Distinct().ToList()
+            : DefaultGroqModels;
     }
 }
 
 // ── OpenAI ────────────────────────────────────────────────────────────────────
 
-/// <summary>OpenAI client.</summary>
+/// <summary>OpenAI client with auto-failover on token exhaustion.</summary>
 public sealed class OpenAIClient : OpenAICompatibleClient
 {
     protected override string EndpointUrl => "https://api.openai.com/v1/chat/completions";
     protected override string ApiKey { get; }
-    protected override string Model { get; }
     protected override int TimeoutSeconds { get; }
 
-    public OpenAIClient(string apiKey, string model = "gpt-4o-mini", int timeoutSeconds = 8)
+    public static readonly string[] DefaultOpenAIModels =
+    [
+        "gpt-4o-mini",
+        "gpt-4o",
+        "gpt-3.5-turbo"
+    ];
+
+    public OpenAIClient(string apiKey, string model = "gpt-4o-mini", int timeoutSeconds = 8, IEnumerable<string>? candidateModels = null)
     {
-        ApiKey         = apiKey;
-        Model          = model;
-        TimeoutSeconds = timeoutSeconds;
+        ApiKey          = apiKey;
+        Model           = string.IsNullOrWhiteSpace(model) ? "gpt-4o-mini" : model;
+        TimeoutSeconds  = timeoutSeconds;
+        CandidateModels = (candidateModels != null && candidateModels.Any())
+            ? candidateModels.Distinct().ToList()
+            : DefaultOpenAIModels;
     }
 }
