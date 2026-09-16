@@ -18,11 +18,11 @@ public abstract class OpenAICompatibleClient : IAIClient
     private static readonly HttpClient _http = new();
 
     private const string SystemPrompt =
-        "Eres un asistente de examen. " +
-        "Dado un enunciado de pregunta tipo test con sus opciones, " +
-        "responde ÚNICAMENTE con la(s) letra(s) correcta(s) en mayúsculas, " +
-        "separadas por coma si hay más de una (ejemplo: B  o  A,C). " +
-        "Sin explicación. Sin puntuación extra. Solo las letras.";
+        "Eres un asistente de examen experto y ultra-preciso. " +
+        "Dado un enunciado de pregunta tipo test con sus opciones (tengan o no letras identificativas): " +
+        "1. Si las opciones no vienen precedidas por letras A, B, C, D, asume siempre que la 1ª opción es A, la 2ª es B, la 3ª es C, la 4ª es D, la 5ª es E. " +
+        "2. Responde ÚNICAMENTE con la(s) letra(s) mayúscula(s) correcta(s) (ejemplo: A o B o A,C). " +
+        "3. PROHIBIDO dar explicaciones, texto adicional o palabras. Responde EXCLUSIVAMENTE con la(s) letra(s).";
 
     public async Task<string> AskAsync(string questionText, CancellationToken ct = default)
     {

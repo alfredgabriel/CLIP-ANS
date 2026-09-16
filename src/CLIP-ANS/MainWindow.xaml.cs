@@ -347,6 +347,13 @@ public partial class MainWindow : Window
                 ? $"✓ OK — Resp: {string.Join(",", parsed)}"
                 : $"✓ OK — Resp: {result.Trim()}";
             TestResultLabel.Foreground = new SolidColorBrush(Colors.Lime);
+
+            // Auto-save working configuration immediately
+            _config.Model = model;
+            _configService.SaveApiKey(_config.Provider, key);
+            _configService.Save(_config);
+            ConfigChanged?.Invoke(_config);
+            _apiKeyDirty = false;
         }
         catch (TimeoutException)
         {
@@ -420,15 +427,12 @@ public partial class MainWindow : Window
         _config.Model = (ModelCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()
                         ?? _config.Model;
 
-        // Save API key if changed
-        if (_apiKeyDirty)
+        // Save API key
+        var key = (_showingKey ? ApiKeyPlain.Text : ApiKeyBox.Password).Trim();
+        if (!string.IsNullOrWhiteSpace(key) && !key.Contains("..."))
         {
-            var key = _showingKey ? ApiKeyPlain.Text : ApiKeyBox.Password;
-            if (!string.IsNullOrWhiteSpace(key))
-            {
-                _configService.SaveApiKey(_config.Provider, key);
-                _apiKeyDirty = false;
-            }
+            _configService.SaveApiKey(_config.Provider, key);
+            _apiKeyDirty = false;
         }
 
         // Fire hot-reload
