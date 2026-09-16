@@ -177,20 +177,20 @@ public static class IconRenderer
         return BitmapToIcon(bmp);
     }
 
-    /// <summary>Creates an icon for the paused state (dashed dim gray outline).</summary>
+    /// <summary>Creates an icon for the paused/disabled state (dim gray circle with border).</summary>
     public static Icon CreatePausedIcon()
     {
         using var bmp = new Bitmap(Size, Size, PixelFormat.Format32bppArgb);
         using var g   = Graphics.FromImage(bmp);
         ConfigureGraphics(g);
 
-        float margin = 3.5f;
+        float margin = 3f;
         var rect = new RectangleF(margin, margin, Size - 2 * margin, Size - 2 * margin);
 
-        using var pen = new Pen(Color.FromArgb(130, 130, 130), 1.8f)
-        {
-            DashStyle = DashStyle.Dash
-        };
+        using var brush = new SolidBrush(Color.FromArgb(75, 75, 75));
+        g.FillEllipse(brush, rect);
+
+        using var pen = new Pen(Color.FromArgb(125, 125, 125), 1.5f);
         g.DrawEllipse(pen, rect);
 
         return BitmapToIcon(bmp);

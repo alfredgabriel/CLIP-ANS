@@ -28,8 +28,14 @@ public class AppConfig
     [JsonPropertyName("poll_interval_ms")]
     public int PollIntervalMs { get; set; } = 250;
 
+    [JsonPropertyName("detect_text")]
+    public bool DetectText { get; set; } = true;
+
     [JsonPropertyName("detect_screenshots")]
     public bool DetectScreenshots { get; set; } = true;
+
+    [JsonPropertyName("show_notifications")]
+    public bool ShowNotifications { get; set; } = true;
 
     // ── Startup ──────────────────────────────────────────────────────────────
     [JsonPropertyName("show_window_on_start")]

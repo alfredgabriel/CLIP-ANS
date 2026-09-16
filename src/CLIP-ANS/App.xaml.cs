@@ -45,7 +45,15 @@ public partial class App : System.Windows.Application
             _tray = new TrayManager(state);
             _tray.OpenRequested  += ShowMainWindow;
             _tray.ExitRequested  += () => Shutdown();
-            _tray.PauseToggled   += paused => state.DetectionEnabled = !paused;
+            _tray.ConfigToggled  += OnTrayConfigToggled;
+
+            // If both detection modes are disabled, start in Paused state (gray icon)
+            if (!config.DetectText && !config.DetectScreenshots)
+            {
+                state.DetectionEnabled = false;
+                state.Status = AppStatus.Paused;
+                _tray.UpdateIconFromState();
+            }
 
             // 3. Create main window (hidden by default unless first run)
             _mainWindow = new MainWindow();
@@ -90,6 +98,12 @@ public partial class App : System.Windows.Application
         // Restart watcher with new poll interval / min length
         _watcher?.Stop();
         StartWatcher();
+    }
+
+    private void OnTrayConfigToggled(AppConfig newConfig)
+    {
+        _configService.Save(newConfig);
+        _mainWindow?.SyncTogglesFromConfig(newConfig);
     }
 
     // ── AI client factory ─────────────────────────────────────────────────────

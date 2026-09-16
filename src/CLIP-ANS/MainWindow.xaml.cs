@@ -173,8 +173,9 @@ public partial class MainWindow : Window
         // Behaviour sliders
         MinLengthSlider.Value = _config.MinTextLength;
         DebounceSlider.Value  = _config.DebounceMs;
-        DetectionToggle.IsChecked  = AppState.Instance.DetectionEnabled;
-        ScreenshotToggle.IsChecked = _config.DetectScreenshots;
+        TextDetectionToggle.IsChecked = _config.DetectText;
+        ScreenshotToggle.IsChecked    = _config.DetectScreenshots;
+        NotificationsToggle.IsChecked = _config.ShowNotifications;
 
         // Legend
         BuildLegendItems();
@@ -523,14 +524,48 @@ public partial class MainWindow : Window
             DebounceLabel.Text = $"{(int)e.NewValue} ms";
     }
 
-    private void DetectionToggle_Changed(object sender, RoutedEventArgs e)
+    private void TextDetectionToggle_Changed(object sender, RoutedEventArgs e)
     {
-        AppState.Instance.DetectionEnabled = DetectionToggle.IsChecked ?? true;
+        if (_config == null) return;
+        _config.DetectText = TextDetectionToggle.IsChecked ?? true;
+        ApplyDetectionState();
     }
 
     private void ScreenshotToggle_Changed(object sender, RoutedEventArgs e)
     {
+        if (_config == null) return;
         _config.DetectScreenshots = ScreenshotToggle.IsChecked ?? true;
+        ApplyDetectionState();
+    }
+
+    private void NotificationsToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_config == null) return;
+        _config.ShowNotifications = NotificationsToggle.IsChecked ?? true;
+        _configService.Save(_config);
+    }
+
+    private void ApplyDetectionState()
+    {
+        var bothDisabled = !_config.DetectText && !_config.DetectScreenshots;
+        AppState.Instance.DetectionEnabled = !bothDisabled;
+
+        if (bothDisabled)
+            AppState.Instance.Status = AppStatus.Paused;
+        else if (AppState.Instance.Status == AppStatus.Paused)
+            AppState.Instance.Status = AppStatus.Watching;
+
+        _configService.Save(_config);
+        UpdateStatusChip();
+    }
+
+    public void SyncTogglesFromConfig(AppConfig config)
+    {
+        _config = config;
+        TextDetectionToggle.IsChecked = config.DetectText;
+        ScreenshotToggle.IsChecked    = config.DetectScreenshots;
+        NotificationsToggle.IsChecked = config.ShowNotifications;
+        UpdateStatusChip();
     }
 
     // ── Event handlers — Add / Delete color option ────────────────────────────

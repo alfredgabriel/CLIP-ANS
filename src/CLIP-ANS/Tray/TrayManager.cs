@@ -18,7 +18,7 @@ public sealed class TrayManager : IDisposable
     // Events raised to App.xaml.cs
     public event Action? OpenRequested;
     public event Action? ExitRequested;
-    public event Action<bool>? PauseToggled;
+    public event Action<AppConfig>? ConfigToggled;
 
     public TrayManager(AppState state)
     {
@@ -82,8 +82,8 @@ public sealed class TrayManager : IDisposable
                         ? ("CLIP-ANS: " + answer)[..63]
                         : "CLIP-ANS: " + answer;
 
-                    // Show balloon tip so the user can read the full answer right away
-                    if (!string.IsNullOrWhiteSpace(answer))
+                    // Show balloon tip only if notifications are enabled
+                    if (config.ShowNotifications && !string.IsNullOrWhiteSpace(answer))
                     {
                         var balloon = answer.Length > 250 ? answer[..250] + "…" : answer;
                         _notifyIcon.ShowBalloonTip(4000, "CLIP-ANS — Respuesta", balloon, ToolTipIcon.Info);
@@ -103,7 +103,7 @@ public sealed class TrayManager : IDisposable
 
             case AppStatus.Paused:
                 icon = IconRenderer.CreatePausedIcon();
-                tip  = "CLIP-ANS — PAUSADO";
+                tip  = "CLIP-ANS — DESACTIVADO (Detección apagada)";
                 break;
 
             default:
@@ -144,6 +144,24 @@ public sealed class TrayManager : IDisposable
         _currentIcon = icon;
     }
 
+    private void ApplyTogglesAndSave(AppConfig cfg)
+    {
+        var bothDisabled = !cfg.DetectText && !cfg.DetectScreenshots;
+        _state.DetectionEnabled = !bothDisabled;
+
+        if (bothDisabled)
+        {
+            _state.Status = AppStatus.Paused;
+        }
+        else if (_state.Status == AppStatus.Paused)
+        {
+            _state.Status = AppStatus.Watching;
+        }
+
+        UpdateIconFromState();
+        ConfigToggled?.Invoke(cfg);
+    }
+
     private void BuildContextMenu()
     {
         var menu = new ContextMenuStrip();
@@ -169,11 +187,68 @@ public sealed class TrayManager : IDisposable
                 try
                 {
                     Clipboard.SetText(answerToCopy);
-                    _notifyIcon.ShowBalloonTip(2000, "CLIP-ANS", "✓ Respuesta copiada al portapapeles", ToolTipIcon.None);
+                    if (_state.Config?.ShowNotifications ?? true)
+                    {
+                        _notifyIcon.ShowBalloonTip(2000, "CLIP-ANS", "✓ Respuesta copiada al portapapeles", ToolTipIcon.None);
+                    }
                 }
                 catch { }
             }
         };
+
+        var itemOpen = new ToolStripMenuItem("ABRIR")
+        {
+            ForeColor = Color.White,
+        };
+        itemOpen.Click += (_, _) => OpenRequested?.Invoke();
+
+        var itemDetectText = new ToolStripMenuItem("DETECTAR TEXTO COPIADO")
+        {
+            CheckOnClick = true,
+            ForeColor    = Color.White,
+        };
+        itemDetectText.Click += (_, _) =>
+        {
+            if (_state.Config is { } cfg)
+            {
+                cfg.DetectText = itemDetectText.Checked;
+                ApplyTogglesAndSave(cfg);
+            }
+        };
+
+        var itemDetectScreenshots = new ToolStripMenuItem("DETECTAR CAPTURAS (OCR)")
+        {
+            CheckOnClick = true,
+            ForeColor    = Color.White,
+        };
+        itemDetectScreenshots.Click += (_, _) =>
+        {
+            if (_state.Config is { } cfg)
+            {
+                cfg.DetectScreenshots = itemDetectScreenshots.Checked;
+                ApplyTogglesAndSave(cfg);
+            }
+        };
+
+        var itemNotifications = new ToolStripMenuItem("NOTIFICACIONES DE WINDOWS")
+        {
+            CheckOnClick = true,
+            ForeColor    = Color.White,
+        };
+        itemNotifications.Click += (_, _) =>
+        {
+            if (_state.Config is { } cfg)
+            {
+                cfg.ShowNotifications = itemNotifications.Checked;
+                ApplyTogglesAndSave(cfg);
+            }
+        };
+
+        var itemExit = new ToolStripMenuItem("SALIR")
+        {
+            ForeColor = Color.FromArgb(255, 80, 80),
+        };
+        itemExit.Click += (_, _) => ExitRequested?.Invoke();
 
         menu.Opening += (_, _) =>
         {
@@ -191,35 +266,27 @@ public sealed class TrayManager : IDisposable
             {
                 itemCopy.Text = "📋 COPIAR RESPUESTA";
             }
+
+            if (_state.Config is { } cfg)
+            {
+                itemDetectText.Checked        = cfg.DetectText;
+                itemDetectScreenshots.Checked = cfg.DetectScreenshots;
+                itemNotifications.Checked     = cfg.ShowNotifications;
+            }
         };
 
-        var itemOpen = new ToolStripMenuItem("ABRIR")
-        {
-            ForeColor = Color.White,
-        };
-        itemOpen.Click += (_, _) => OpenRequested?.Invoke();
+        menu.Items.AddRange([
+            itemCopy,
+            new ToolStripSeparator(),
+            itemOpen,
+            new ToolStripSeparator(),
+            itemDetectText,
+            itemDetectScreenshots,
+            itemNotifications,
+            new ToolStripSeparator(),
+            itemExit
+        ]);
 
-        var itemPause = new ToolStripMenuItem("PAUSAR DETECCIÓN")
-        {
-            ForeColor = Color.White,
-        };
-        itemPause.Click += (_, _) =>
-        {
-            _state.DetectionEnabled = !_state.DetectionEnabled;
-            itemPause.Text = _state.DetectionEnabled ? "PAUSAR DETECCIÓN" : "REANUDAR DETECCIÓN";
-            PauseToggled?.Invoke(!_state.DetectionEnabled);
-        };
-
-        var sepCopy = new ToolStripSeparator();
-        var sep     = new ToolStripSeparator();
-
-        var itemExit = new ToolStripMenuItem("SALIR")
-        {
-            ForeColor = Color.FromArgb(255, 80, 80),
-        };
-        itemExit.Click += (_, _) => ExitRequested?.Invoke();
-
-        menu.Items.AddRange([itemCopy, sepCopy, itemOpen, itemPause, sep, itemExit]);
         _notifyIcon.ContextMenuStrip = menu;
     }
 

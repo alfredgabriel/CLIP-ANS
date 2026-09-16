@@ -172,23 +172,32 @@
                     <StackPanel>
                         <TextBlock Text="COMPORTAMIENTO" Style="{StaticResource SectionLabel}"/>
 
-                        <!-- Detection toggle -->
-                        <CheckBox x:Name="DetectionToggle"
+                        <!-- Text detection toggle -->
+                        <CheckBox x:Name="TextDetectionToggle"
                                   Style="{StaticResource BrutalistCheckBox}"
-                                  Content="DETECCIÓN ACTIVA"
+                                  Content="DETECTAR TEXTO COPIADO"
                                   IsChecked="True"
-                                  Margin="0,2,0,4"
-                                  Checked="DetectionToggle_Changed"
-                                  Unchecked="DetectionToggle_Changed"/>
+                                  Margin="0,2,0,3"
+                                  Checked="TextDetectionToggle_Changed"
+                                  Unchecked="TextDetectionToggle_Changed"/>
 
                         <!-- Screenshot / OCR toggle -->
                         <CheckBox x:Name="ScreenshotToggle"
                                   Style="{StaticResource BrutalistCheckBox}"
-                                  Content="DETECTAR CAPTURAS DE PANTALLA (OCR)"
+                                  Content="DETECTAR CAPTURAS (OCR)"
                                   IsChecked="True"
-                                  Margin="0,0,0,8"
+                                  Margin="0,0,0,3"
                                   Checked="ScreenshotToggle_Changed"
                                   Unchecked="ScreenshotToggle_Changed"/>
+
+                        <!-- Notifications toggle -->
+                        <CheckBox x:Name="NotificationsToggle"
+                                  Style="{StaticResource BrutalistCheckBox}"
+                                  Content="NOTIFICACIONES DE WINDOWS"
+                                  IsChecked="True"
+                                  Margin="0,0,0,6"
+                                  Checked="NotificationsToggle_Changed"
+                                  Unchecked="NotificationsToggle_Changed"/>
 
                         <!-- Min text length -->
                         <TextBlock Text="LONGITUD MÍNIMA DE TEXTO" Style="{StaticResource SectionLabel}" Margin="0,2,0,1"/>

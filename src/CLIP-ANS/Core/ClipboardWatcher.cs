@@ -59,7 +59,11 @@ public sealed class ClipboardWatcher : IDisposable
 
     private void Poll()
     {
-        if (_state.Config is null) return;
+        var config = _state.Config;
+        if (config is null) return;
+
+        // If both detection modes are disabled, or detection is paused, do nothing
+        if (!config.DetectText && !config.DetectScreenshots) return;
         if (!_state.DetectionEnabled) return;
 
         // Check if clipboard changed in Windows
@@ -67,7 +71,6 @@ public sealed class ClipboardWatcher : IDisposable
         if (currentSeq == _lastSequenceNumber && currentSeq != 0)
             return;
 
-        var config = _state.Config;
         string text = string.Empty;
         byte[]? imageBytes = null;
 
@@ -78,8 +81,8 @@ public sealed class ClipboardWatcher : IDisposable
             {
                 System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
                 {
-                    // 1. Check text
-                    if (System.Windows.Clipboard.ContainsText())
+                    // 1. Check text only if DetectText is enabled
+                    if (config.DetectText && System.Windows.Clipboard.ContainsText())
                     {
                         text = System.Windows.Clipboard.GetText();
                     }
@@ -127,7 +130,7 @@ public sealed class ClipboardWatcher : IDisposable
         _lastSequenceNumber = currentSeq;
 
         // ── Text path ────────────────────────────────────────────────────────
-        if (!string.IsNullOrWhiteSpace(text) && text.Length >= config.MinTextLength)
+        if (config.DetectText && !string.IsNullOrWhiteSpace(text) && text.Length >= config.MinTextLength)
         {
             var hash = ComputeHash(text);
             if (hash == _lastHash && _state.Status == AppStatus.Answered) return;
