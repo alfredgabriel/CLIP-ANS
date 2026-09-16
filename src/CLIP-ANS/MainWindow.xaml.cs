@@ -54,6 +54,12 @@ public partial class MainWindow : Window
     {
         _config = _configService.Load();
         InitializeComponent();
+        try
+        {
+            var uri = new Uri("pack://application:,,,/Resources/app_icon.ico", UriKind.RelativeOrAbsolute);
+            Icon = System.Windows.Media.Imaging.BitmapFrame.Create(uri);
+        }
+        catch { }
         PopulateFromConfig();
         AppState.Instance.PropertyChanged += (_, e) =>
         {
