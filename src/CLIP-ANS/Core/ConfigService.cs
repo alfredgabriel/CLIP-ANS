@@ -42,7 +42,14 @@ public class ConfigService
             if (File.Exists(_configPath))
             {
                 var json = File.ReadAllText(_configPath);
-                return JsonSerializer.Deserialize<AppConfig>(json, _jsonOpts) ?? new AppConfig();
+                var config = JsonSerializer.Deserialize<AppConfig>(json, _jsonOpts) ?? new AppConfig();
+                // Validate that loaded model is valid; if obsolete, auto-upgrade to the provider's top model
+                if (AppConfig.ProviderModels.TryGetValue(config.Provider.ToLowerInvariant(), out var validModels))
+                {
+                    if (!validModels.Contains(config.Model))
+                        config.Model = validModels[0];
+                }
+                return config;
             }
         }
         catch (Exception ex)

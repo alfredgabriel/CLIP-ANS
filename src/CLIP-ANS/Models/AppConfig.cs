@@ -13,7 +13,7 @@ public class AppConfig
     public string Provider { get; set; } = "groq";  // "groq" | "openai"
 
     [JsonPropertyName("model")]
-    public string Model { get; set; } = "qwen/qwen3.8-27b";
+    public string Model { get; set; } = "llama-3.3-70b-versatile";
 
     [JsonPropertyName("timeout_seconds")]
     public int TimeoutSeconds { get; set; } = 8;
@@ -93,7 +93,7 @@ public class AppConfig
 
     public static Dictionary<string, string[]> ProviderModels => new()
     {
-        ["groq"]   = ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "groq/compound-mini"],
-        ["openai"]  = ["gpt-4o-mini", "gpt-4o"],
+        ["groq"]   = ["llama-3.3-70b-versatile", "deepseek-r1-distill-llama-70b", "llama-3.1-8b-instant"],
+        ["openai"] = ["gpt-4o", "gpt-4o-mini"],
     };
 }

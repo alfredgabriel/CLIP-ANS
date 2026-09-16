@@ -163,18 +163,15 @@ public sealed class GroqClient : OpenAICompatibleClient
 
     public static readonly string[] DefaultGroqModels =
     [
-        "qwen/qwen3.8-27b",
-        "openai/gpt-oss-120b",
-        "openai/gpt-oss-20b",
-        "groq/compound-mini",
         "llama-3.3-70b-versatile",
+        "deepseek-r1-distill-llama-70b",
         "llama-3.1-8b-instant"
     ];
 
-    public GroqClient(string apiKey, string model = "qwen/qwen3.8-27b", int timeoutSeconds = 8, IEnumerable<string>? candidateModels = null)
+    public GroqClient(string apiKey, string model = "llama-3.3-70b-versatile", int timeoutSeconds = 8, IEnumerable<string>? candidateModels = null)
     {
         ApiKey          = apiKey;
-        Model           = string.IsNullOrWhiteSpace(model) ? "qwen/qwen3.8-27b" : model;
+        Model           = string.IsNullOrWhiteSpace(model) ? "llama-3.3-70b-versatile" : model;
         TimeoutSeconds  = timeoutSeconds;
         CandidateModels = (candidateModels != null && candidateModels.Any())
             ? candidateModels.Distinct().ToList()
@@ -193,15 +190,14 @@ public sealed class OpenAIClient : OpenAICompatibleClient
 
     public static readonly string[] DefaultOpenAIModels =
     [
-        "gpt-4o-mini",
         "gpt-4o",
-        "gpt-3.5-turbo"
+        "gpt-4o-mini"
     ];
 
-    public OpenAIClient(string apiKey, string model = "gpt-4o-mini", int timeoutSeconds = 8, IEnumerable<string>? candidateModels = null)
+    public OpenAIClient(string apiKey, string model = "gpt-4o", int timeoutSeconds = 8, IEnumerable<string>? candidateModels = null)
     {
         ApiKey          = apiKey;
-        Model           = string.IsNullOrWhiteSpace(model) ? "gpt-4o-mini" : model;
+        Model           = string.IsNullOrWhiteSpace(model) ? "gpt-4o" : model;
         TimeoutSeconds  = timeoutSeconds;
         CandidateModels = (candidateModels != null && candidateModels.Any())
             ? candidateModels.Distinct().ToList()
