@@ -28,7 +28,7 @@ if (-not $dotnetCmd) {
 Write-Host "[1/3] Usando .NET: $($dotnetCmd.Source)" -ForegroundColor Green
 
 # ── 3. Publicar aplicacion en ./publish ─────────────────────────────────────────
-$project = "$PSScriptRoot\src\QuizHelper\QuizHelper.csproj"
+$project = "$PSScriptRoot\src\CLIP-ANS\CLIP-ANS.csproj"
 $publishDir = "$PSScriptRoot\publish"
 
 Write-Host "[2/3] Compilando y publicando CLIP-ANS (win-x64, single-file)..." -ForegroundColor Cyan

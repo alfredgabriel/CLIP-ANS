@@ -22,21 +22,23 @@ Aplicación de escritorio Windows tipo **tray app** para resolver preguntas de t
 ## Instalador y Ejecución
 
 ### Generar instalador Setup.exe profesional
-Para generar el instalador estándar de Windows (`CLIP-ANS-Setup-1.0.0.exe`) con accesos directos, desinstalador e inicio automático con Windows:
+Para compilar la aplicación y generar el instalador oficial de Windows (`CLIP-ANS-Setup-1.0.0.exe`):
 
 ```powershell
 .\build-installer.ps1
 ```
 
-El instalador generado se ubicará en `.\installer_output\CLIP-ANS-Setup-1.0.0.exe`.
+El instalador se generará en `installer_output\CLIP-ANS-Setup-1.0.0.exe`.
 
-### Publicar ejecutable único portable (.exe sin instalador)
+### Compilación desde el código fuente (.NET 8 SDK)
 
 ```powershell
-.\publish.ps1
-```
+# Compilar solución
+dotnet build CLIP-ANS.sln
 
-El ejecutable aparece en `./publish/CLIP-ANS.exe`.
+# Ejecutar directamente
+dotnet run --project src/CLIP-ANS/CLIP-ANS.csproj
+```
 
 ## Colores por defecto
 

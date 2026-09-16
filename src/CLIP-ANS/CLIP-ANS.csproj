@@ -30,14 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Fonts: included only when present (run setup.ps1 first) -->
-    <Resource Include="Resources\Fonts\JetBrainsMono-Regular.ttf"
-              Condition="Exists('Resources\Fonts\JetBrainsMono-Regular.ttf')" />
-    <Resource Include="Resources\Fonts\JetBrainsMono-Bold.ttf"
-              Condition="Exists('Resources\Fonts\JetBrainsMono-Bold.ttf')" />
-    <!-- App icon resource (added in commit 5) -->
-    <Resource Include="Resources\app_icon.ico"
-              Condition="Exists('Resources\app_icon.ico')" />
+    <Resource Include="Resources\app_icon.ico" Condition="Exists('Resources\app_icon.ico')" />
   </ItemGroup>
 
 </Project>
