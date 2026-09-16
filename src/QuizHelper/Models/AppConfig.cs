@@ -3,8 +3,8 @@ using System.Text.Json.Serialization;
 namespace QuizHelper.Models;
 
 /// <summary>
-/// Serializable configuration POCO — stored in %APPDATA%\QuizHelper\config.json.
-/// API key is NOT stored here; it goes to Windows Credential Manager.
+/// Serializable configuration POCO — stored in %APPDATA%\CLIP-ANS\config.json.
+/// API keys are NOT stored here; they live in Windows Credential Manager.
 /// </summary>
 public class AppConfig
 {

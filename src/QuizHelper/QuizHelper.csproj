@@ -6,7 +6,10 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>QuizHelper</RootNamespace>
-    <AssemblyName>QuizHelper</AssemblyName>
+    <AssemblyName>CLIP-ANS</AssemblyName>
+    <Product>CLIP-ANS</Product>
+    <Title>CLIP-ANS</Title>
+    <Version>1.0.0</Version>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>

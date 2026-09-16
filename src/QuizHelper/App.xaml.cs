@@ -12,7 +12,7 @@ namespace QuizHelper;
 ///   - Window X closes → Hide(), process stays alive
 ///   - Only "Salir" from tray menu calls Shutdown()
 /// </summary>
-public partial class App : Application
+public partial class App : System.Windows.Application
 {
     private TrayManager?    _tray;
     private MainWindow?     _mainWindow;

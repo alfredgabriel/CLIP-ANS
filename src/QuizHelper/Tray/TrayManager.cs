@@ -25,7 +25,7 @@ public sealed class TrayManager : IDisposable
         _state = state;
         _notifyIcon = new NotifyIcon
         {
-            Text    = "Quiz Helper — Esperando pregunta",
+            Text    = "CLIP-ANS — Esperando pregunta",
             Visible = true,
         };
 
@@ -64,32 +64,32 @@ public sealed class TrayManager : IDisposable
             case AppStatus.Idle:
             case AppStatus.Watching:
                 icon = IconRenderer.CreateIdleIcon();
-                tip  = "Quiz Helper — Esperando pregunta";
+                tip  = "CLIP-ANS — Esperando pregunta";
                 break;
 
             case AppStatus.Querying:
                 icon = IconRenderer.CreateQueryingIcon();
-                tip  = "Quiz Helper — Consultando IA...";
+                tip  = "CLIP-ANS — Consultando IA...";
                 break;
 
             case AppStatus.Answered:
                 icon = BuildAnswerIcon(config);
-                tip  = $"Quiz Helper — Respuesta: {_state.LastAnswerDisplay}";
+                tip  = $"CLIP-ANS — Respuesta: {_state.LastAnswerDisplay}";
                 break;
 
             case AppStatus.Error:
                 icon = IconRenderer.CreateErrorIcon();
-                tip  = $"Quiz Helper — Error: {_state.LastErrorMessage}";
+                tip  = $"CLIP-ANS — Error: {_state.LastErrorMessage}";
                 break;
 
             case AppStatus.Paused:
                 icon = IconRenderer.CreatePausedIcon();
-                tip  = "Quiz Helper — PAUSADO";
+                tip  = "CLIP-ANS — PAUSADO";
                 break;
 
             default:
                 icon = IconRenderer.CreateIdleIcon();
-                tip  = "Quiz Helper";
+                tip  = "CLIP-ANS";
                 break;
         }
 

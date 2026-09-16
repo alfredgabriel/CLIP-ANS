@@ -6,8 +6,8 @@ $project = "$PSScriptRoot\src\QuizHelper\QuizHelper.csproj"
 $output  = "$PSScriptRoot\publish"
 
 Write-Host ""
-Write-Host "QUIZ HELPER — PUBLISH" -ForegroundColor White
-Write-Host "=====================" -ForegroundColor White
+Write-Host "CLIP-ANS — PUBLISH" -ForegroundColor White
+Write-Host "==================" -ForegroundColor White
 Write-Host ""
 Write-Host "Target : win-x64, self-contained, single file" -ForegroundColor Cyan
 Write-Host "Output : $output" -ForegroundColor Cyan
@@ -23,5 +23,5 @@ dotnet publish $project `
     -o $output
 
 Write-Host ""
-Write-Host "Publicado en: $output\QuizHelper.exe" -ForegroundColor Green
+Write-Host "Publicado en: $output\CLIP-ANS.exe" -ForegroundColor Green
 Write-Host ""

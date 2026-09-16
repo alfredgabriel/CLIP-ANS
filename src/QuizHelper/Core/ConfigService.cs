@@ -1,5 +1,5 @@
+using System.IO;
 using System.Text.Json;
-using System.Windows.Security.Permissions;
 using QuizHelper.Models;
 using Windows.Security.Credentials;
 
@@ -7,14 +7,14 @@ namespace QuizHelper.Core;
 
 /// <summary>
 /// Manages persistence:
-///   - config.json in %APPDATA%\QuizHelper\ for non-sensitive settings
+///   - config.json in %APPDATA%\CLIP-ANS\ for non-sensitive settings
 ///   - Windows Credential Manager (PasswordVault) for API keys
 /// </summary>
 public class ConfigService
 {
-    private const string AppFolder = "QuizHelper";
+    private const string AppFolder = "CLIP-ANS";
     private const string ConfigFile = "config.json";
-    private const string CredentialResource = "QuizHelper_ApiKey";
+    private const string CredentialResource = "CLIP-ANS_ApiKey";
 
     private readonly string _configDir;
     private readonly string _configPath;

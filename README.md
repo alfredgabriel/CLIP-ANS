@@ -1,11 +1,12 @@
-# Quiz Helper
+# CLIP-ANS
 
-Aplicación de escritorio Windows tipo **tray app** para estudiar tests de práctica.
+Aplicación de escritorio Windows tipo **tray app** para resolver preguntas de tests de práctica de forma instantánea.
 
-- Detecta preguntas de test al copiarlas (Ctrl+C)
+- Detecta preguntas de test al copiarlas (`Ctrl+C`)
 - Consulta Groq / OpenAI y obtiene la respuesta correcta
 - Comunica el resultado cambiando el color del icono de la bandeja del sistema
-- Sin popups, sin ventanas, sin fricción
+- Sin popups, sin ventanas molestas, sin fricción
+- Interfaz gráfica neo-brutalista de configuración
 
 ## Stack
 
@@ -16,39 +17,26 @@ Aplicación de escritorio Windows tipo **tray app** para estudiar tests de prác
 | Tray | `System.Windows.Forms.NotifyIcon` |
 | AI | Groq / OpenAI (OpenAI-compatible API) |
 | API key storage | Windows Credential Manager (`PasswordVault`) |
-| Config | `%APPDATA%\QuizHelper\config.json` |
+| Config | `%APPDATA%\CLIP-ANS\config.json` |
 
-## Requisitos
+## Instalador y Ejecución
 
-- Windows 10 / 11 (x64)
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-
-## Instalación y ejecución
+### Generar instalador Setup.exe profesional
+Para generar el instalador estándar de Windows (`CLIP-ANS-Setup-1.0.0.exe`) con accesos directos, desinstalador e inicio automático con Windows:
 
 ```powershell
-git clone git@github.com:alfredgabriel/CLIP-ANS.git
-cd CLIP-ANS
-
-# Restaurar dependencias
-dotnet restore src/QuizHelper/QuizHelper.csproj
-
-# Ejecutar en modo desarrollo
-dotnet run --project src/QuizHelper/QuizHelper.csproj
+.\build-installer.ps1
 ```
 
-## Publicar como .exe único (sin consola)
+El instalador generado se ubicará en `.\installer_output\CLIP-ANS-Setup-1.0.0.exe`.
+
+### Publicar ejecutable único portable (.exe sin instalador)
 
 ```powershell
-dotnet publish src/QuizHelper/QuizHelper.csproj `
-  -c Release `
-  -r win-x64 `
-  --self-contained true `
-  -p:PublishSingleFile=true `
-  -p:IncludeNativeLibrariesForSelfExtract=true `
-  -o ./publish
+.\publish.ps1
 ```
 
-El ejecutable aparece en `./publish/QuizHelper.exe`.
+El ejecutable aparece en `./publish/CLIP-ANS.exe`.
 
 ## Colores por defecto
 

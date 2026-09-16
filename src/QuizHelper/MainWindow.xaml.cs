@@ -28,9 +28,9 @@ public class LegendItem
     public SolidColorBrush ColorBrush =>
         new(ColorFromHex(HexColor));
 
-    private static Color ColorFromHex(string hex)
+    private static System.Windows.Media.Color ColorFromHex(string hex)
     {
-        try { return (Color)ColorConverter.ConvertFromString(hex); }
+        try { return (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex); }
         catch { return Colors.White; }
     }
 }
@@ -149,11 +149,11 @@ public partial class MainWindow : Window
         var answers = AppState.Instance.LastAnswers;
         if (answers.Count == 0) return Colors.White;
 
-        var colors = answers
+        List<System.Windows.Media.Color> colors = answers
             .Select(a =>
             {
                 var hex = config.ColorMap.TryGetValue(a.ToString(), out var h) ? h : "#FFFFFF";
-                try { return (System.Windows.Media.Color)ColorConverter.ConvertFromString(hex); }
+                try { return (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex); }
                 catch { return Colors.White; }
             }).ToList();
 
@@ -298,7 +298,7 @@ public partial class MainWindow : Window
         // Visual confirmation
         System.Windows.MessageBox.Show(
             "CONFIGURACIÓN GUARDADA",
-            "QUIZ HELPER",
+            "CLIP-ANS",
             MessageBoxButton.OK,
             MessageBoxImage.None);
     }

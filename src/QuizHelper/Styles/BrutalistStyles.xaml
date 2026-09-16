@@ -36,7 +36,6 @@
         <Setter Property="FontFamily"     Value="{StaticResource MonoFont}"/>
         <Setter Property="FontSize"       Value="10"/>
         <Setter Property="FontWeight"     Value="Bold"/>
-        <Setter Property="CharacterSpacing" Value="150"/>
         <Setter Property="Margin"         Value="0,0,0,6"/>
     </Style>
 
@@ -75,7 +74,6 @@
         <Setter Property="FontFamily"        Value="{StaticResource MonoFont}"/>
         <Setter Property="FontSize"          Value="11"/>
         <Setter Property="FontWeight"        Value="Bold"/>
-        <Setter Property="CharacterSpacing"  Value="100"/>
         <Setter Property="Padding"           Value="16,8"/>
         <Setter Property="Cursor"            Value="Hand"/>
         <Setter Property="FocusVisualStyle"  Value="{x:Null}"/>

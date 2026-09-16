@@ -1,4 +1,4 @@
-# setup.ps1 — Quiz Helper setup script
+# setup.ps1 — CLIP-ANS setup script
 # Downloads JetBrains Mono font and prepares the project for build
 # Run from the repo root: .\setup.ps1
 
@@ -6,8 +6,8 @@ $ErrorActionPreference = "Stop"
 $fontsDir = "$PSScriptRoot\src\QuizHelper\Resources\Fonts"
 
 Write-Host ""
-Write-Host "QUIZ HELPER — SETUP" -ForegroundColor White
-Write-Host "===================" -ForegroundColor White
+Write-Host "CLIP-ANS — SETUP" -ForegroundColor White
+Write-Host "================" -ForegroundColor White
 Write-Host ""
 
 # ── 1. Download JetBrains Mono ────────────────────────────────────────────────
