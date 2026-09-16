@@ -51,10 +51,26 @@ public abstract class OpenAICompatibleClient : IAIClient
         try
         {
             var response = await _http.SendAsync(request, cts.Token);
-            response.EnsureSuccessStatusCode();
-
             var body     = await response.Content.ReadAsStringAsync(cts.Token);
-            var doc      = JsonDocument.Parse(body);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                string errorMsg = $"HTTP {(int)response.StatusCode}";
+                try
+                {
+                    using var errDoc = JsonDocument.Parse(body);
+                    if (errDoc.RootElement.TryGetProperty("error", out var errObj) &&
+                        errObj.TryGetProperty("message", out var msgProp))
+                    {
+                        errorMsg = msgProp.GetString() ?? errorMsg;
+                    }
+                }
+                catch { /* fallback to status code */ }
+
+                throw new InvalidOperationException(errorMsg);
+            }
+
+            var doc = JsonDocument.Parse(body);
             return doc.RootElement
                       .GetProperty("choices")[0]
                       .GetProperty("message")
@@ -78,7 +94,7 @@ public sealed class GroqClient : OpenAICompatibleClient
     protected override string Model { get; }
     protected override int TimeoutSeconds { get; }
 
-    public GroqClient(string apiKey, string model = "llama3-8b-8192", int timeoutSeconds = 8)
+    public GroqClient(string apiKey, string model = "llama-3.3-70b-versatile", int timeoutSeconds = 8)
     {
         ApiKey         = apiKey;
         Model          = model;

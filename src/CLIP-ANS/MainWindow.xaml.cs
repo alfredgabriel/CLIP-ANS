@@ -214,10 +214,33 @@ public partial class MainWindow : Window
 
     private async void TestConnectionBtn_Click(object sender, RoutedEventArgs e)
     {
-        TestResultLabel.Text      = "PROBANDO...";
+        var key = (_showingKey ? ApiKeyPlain.Text : ApiKeyBox.Password).Trim();
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            TestResultLabel.Text       = "✗ PEGA TU API KEY";
+            TestResultLabel.Foreground = new SolidColorBrush(Colors.Orange);
+            return;
+        }
+
+        if (key.Contains("...") || key.Length < 25)
+        {
+            TestResultLabel.Text       = "✗ CLAVE OCULTA / INCOMPLETA";
+            TestResultLabel.Foreground = new SolidColorBrush(Colors.Orange);
+            System.Windows.MessageBox.Show(
+                "La clave copiada parece incompleta o contiene '...'.\n\n" +
+                "En la web de Groq, debes hacer clic en el botón '+ Create API Key', " +
+                "escribir un nombre y copiar la clave secreta completa en la ventana que aparece " +
+                "haciendo clic en 'Copy' antes de cerrarla.",
+                "CLIP-ANS — API Key Incompleta",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        TestResultLabel.Text       = "PROBANDO...";
         TestResultLabel.Foreground = System.Windows.Media.Brushes.Cyan;
 
-        var key = _showingKey ? ApiKeyPlain.Text : ApiKeyBox.Password;
         var provider = _config.Provider;
         var model    = (ModelCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()
                        ?? _config.Model;
@@ -239,14 +262,19 @@ public partial class MainWindow : Window
         }
         catch (TimeoutException)
         {
-            TestResultLabel.Text      = "✗ TIMEOUT";
+            TestResultLabel.Text       = "✗ TIMEOUT";
             TestResultLabel.Foreground = System.Windows.Media.Brushes.White;
         }
         catch (Exception ex)
         {
-            TestResultLabel.Text = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized")
-                ? "✗ API KEY INVÁLIDA"
-                : $"✗ ERROR: {ex.Message[..Math.Min(40, ex.Message.Length)]}";
+            var msg = ex.Message;
+            if (msg.Contains("401") || msg.Contains("Unauthorized") || msg.Contains("Invalid API Key"))
+                TestResultLabel.Text = "✗ API KEY INVÁLIDA";
+            else if (msg.Contains("decommissioned") || msg.Contains("not found"))
+                TestResultLabel.Text = "✗ MODELO OBSOLETO";
+            else
+                TestResultLabel.Text = $"✗ ERROR: {msg[..Math.Min(35, msg.Length)]}";
+
             TestResultLabel.Foreground = System.Windows.Media.Brushes.White;
         }
     }
