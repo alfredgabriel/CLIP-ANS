@@ -4,8 +4,8 @@
         xmlns:local="clr-namespace:QuizHelper"
         Title="CLIP-ANS"
         Icon="Resources/app_icon.ico"
-        Width="540" MinWidth="440"
-        Height="780" MinHeight="580"
+        Width="920" MinWidth="780"
+        Height="640" MinHeight="520"
         Background="#000000"
         Foreground="#FFFFFF"
         FontFamily="{StaticResource MonoFont}"
@@ -17,99 +17,107 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </Window.Resources>
 
-    <!-- Outer scroll for responsive sizing -->
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Disabled"
-                  Background="#000000">
-        <Grid HorizontalAlignment="Stretch">
-            <StackPanel Margin="24,20,24,28"
-                        MaxWidth="680"
-                        HorizontalAlignment="Stretch">
+    <!-- Main 0-scrollbar responsive dashboard container -->
+    <Grid Margin="20,14,20,16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-                <!-- ══════ HEADER ══════ -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
-                    <TextBlock Text="CLIP"
-                               FontSize="22" FontWeight="Bold"
-                               Foreground="#FFFFFF"
-                               FontFamily="{StaticResource MonoFont}"/>
-                    <TextBlock Text="-ANS"
-                               FontSize="22" FontWeight="Bold"
-                               Foreground="#FFFFFF"
-                               FontFamily="{StaticResource MonoFont}"/>
-                    <Border Width="8" Height="8" Background="#00E6FF"
-                            Margin="10,7,0,0" VerticalAlignment="Top"/>
-                </StackPanel>
+        <!-- ══════ HEADER ══════ -->
+        <Grid Grid.Row="0" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-                <!-- ══════ BLOQUE ESTADO ══════ -->
-                <Border Style="{StaticResource SectionBlock}">
-                    <StackPanel>
-                        <TextBlock Text="ESTADO" Style="{StaticResource SectionLabel}"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <!-- Circular status chip reflecting tray icon color(s) -->
-                            <Border x:Name="StatusChip"
-                                    Width="18" Height="18"
-                                    CornerRadius="9"
-                                    BorderBrush="#FFFFFF"
-                                    BorderThickness="1.5"
-                                    Background="#FFFFFF"
-                                    Margin="0,2,10,0"
-                                    VerticalAlignment="Top"/>
-                            <TextBlock x:Name="StatusTextBlock"
-                                       Style="{StaticResource StatusText}"
-                                       Text="{Binding StatusText, Mode=OneWay}"
-                                       DataContext="{x:Static local:AppStateProxy.Instance}"/>
-                        </StackPanel>
-                        <TextBlock x:Name="LastAnswerLabel"
-                                   Style="{StaticResource ValueText}"
-                                   Margin="0,8,0,0"
-                                   Text="{Binding LastAnswerDisplay, StringFormat='Última respuesta: \{0\}',
-                                                  Mode=OneWay,
-                                                  FallbackValue='Última respuesta: —'}"
-                                   DataContext="{x:Static local:AppStateProxy.Instance}"/>
-                    </StackPanel>
-                </Border>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="CLIP"
+                           FontSize="20" FontWeight="Bold"
+                           Foreground="#FFFFFF"
+                           FontFamily="{StaticResource MonoFont}"/>
+                <TextBlock Text="-ANS"
+                           FontSize="20" FontWeight="Bold"
+                           Foreground="#FFFFFF"
+                           FontFamily="{StaticResource MonoFont}"/>
+                <Border Width="8" Height="8" Background="#00E6FF"
+                        Margin="8,4,0,0" VerticalAlignment="Top"/>
+            </StackPanel>
+
+            <TextBlock Grid.Column="2"
+                       Text="AI QUIZ COPILOT — v1.1"
+                       FontSize="11"
+                       Foreground="#777777"
+                       FontFamily="{StaticResource MonoFont}"
+                       VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- ══════ 2-COLUMN DASHBOARD (RESPONSIVE, NO SCROLLBAR) ══════ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── LEFT COLUMN: CONFIGURACIÓN IA & DETECCIÓN ── -->
+            <Grid Grid.Column="0" Margin="0,0,10,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
                 <!-- ══════ BLOQUE PROVEEDOR IA ══════ -->
-                <Border Style="{StaticResource SectionBlock}">
+                <Border Grid.Row="0" Style="{StaticResource SectionBlock}" Margin="0,0,0,10">
                     <StackPanel>
                         <TextBlock Text="PROVEEDOR IA" Style="{StaticResource SectionLabel}"/>
 
-                        <!-- Provider selector -->
-                        <TextBlock Text="PROVEEDOR" Style="{StaticResource SectionLabel}"
-                                   Margin="0,6,0,4"/>
-                        <ComboBox x:Name="ProviderCombo"
-                                  Style="{StaticResource BrutalistComboBox}"
-                                  HorizontalAlignment="Stretch"
-                                  SelectionChanged="ProviderCombo_SelectionChanged">
-                            <ComboBoxItem Content="GROQ"   Tag="groq"/>
-                            <ComboBoxItem Content="OPENAI" Tag="openai"/>
-                        </ComboBox>
-
-                        <!-- Model selector -->
-                        <TextBlock Text="MODELO" Style="{StaticResource SectionLabel}"
-                                   Margin="0,10,0,4"/>
-                        <Grid HorizontalAlignment="Stretch">
+                        <!-- Provider & Model side-by-side -->
+                        <Grid Margin="0,2,0,0">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="130"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="ModelCombo"
-                                      Grid.Column="0"
-                                      HorizontalAlignment="Stretch"
-                                      Style="{StaticResource BrutalistComboBox}"/>
-                            <Button Grid.Column="1"
-                                    x:Name="RefreshModelsBtn"
-                                    Content="↺"
-                                    Style="{StaticResource BrutalistButton}"
-                                    Padding="12,6"
-                                    Margin="6,0,0,0"
-                                    ToolTip="Cargar modelos disponibles en tu cuenta"
-                                    Click="RefreshModelsBtn_Click"/>
+
+                            <!-- Provider -->
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="PROVEEDOR" Style="{StaticResource SectionLabel}" Margin="0,2,0,3"/>
+                                <ComboBox x:Name="ProviderCombo"
+                                          Style="{StaticResource BrutalistComboBox}"
+                                          HorizontalAlignment="Stretch"
+                                          SelectionChanged="ProviderCombo_SelectionChanged">
+                                    <ComboBoxItem Content="GROQ"   Tag="groq"/>
+                                    <ComboBoxItem Content="OPENAI" Tag="openai"/>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <!-- Model -->
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="MODELO" Style="{StaticResource SectionLabel}" Margin="0,2,0,3"/>
+                                <Grid HorizontalAlignment="Stretch">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="ModelCombo"
+                                              Grid.Column="0"
+                                              HorizontalAlignment="Stretch"
+                                              Style="{StaticResource BrutalistComboBox}"/>
+                                    <Button Grid.Column="1"
+                                            x:Name="RefreshModelsBtn"
+                                            Content="↺"
+                                            Style="{StaticResource BrutalistButton}"
+                                            Padding="10,5"
+                                            Margin="5,0,0,0"
+                                            ToolTip="Cargar modelos disponibles"
+                                            Click="RefreshModelsBtn_Click"/>
+                                </Grid>
+                            </StackPanel>
                         </Grid>
 
                         <!-- API Key -->
-                        <TextBlock Text="API KEY" Style="{StaticResource SectionLabel}"
-                                   Margin="0,10,0,4"/>
+                        <TextBlock Text="API KEY" Style="{StaticResource SectionLabel}" Margin="0,8,0,3"/>
                         <Grid HorizontalAlignment="Stretch">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -124,8 +132,8 @@
                                     x:Name="ShowKeyBtn"
                                     Content="◉"
                                     Style="{StaticResource BrutalistButton}"
-                                    Padding="10,6"
-                                    Margin="6,0,0,0"
+                                    Padding="10,5"
+                                    Margin="5,0,0,0"
                                     ToolTip="Mostrar / Ocultar API key"
                                     Click="ShowKeyBtn_Click"/>
                         </Grid>
@@ -138,7 +146,7 @@
                                  TextChanged="ApiKeyPlain_TextChanged"/>
 
                         <!-- Test connection -->
-                        <Grid Margin="0,12,0,0" HorizontalAlignment="Stretch">
+                        <Grid Margin="0,10,0,0" HorizontalAlignment="Stretch">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
@@ -146,39 +154,40 @@
                             <Button Grid.Column="0"
                                     Content="PROBAR CONEXIÓN"
                                     Style="{StaticResource BrutalistButton}"
+                                    Padding="12,6"
                                     Click="TestConnectionBtn_Click"/>
                             <TextBlock Grid.Column="1"
                                        x:Name="TestResultLabel"
                                        Style="{StaticResource ValueText}"
-                                       Margin="14,0,0,0"
+                                       Margin="10,0,0,0"
                                        VerticalAlignment="Center"
                                        TextWrapping="Wrap"
+                                       FontSize="11"
                                        Text=""/>
                         </Grid>
                     </StackPanel>
                 </Border>
 
                 <!-- ══════ BLOQUE COMPORTAMIENTO ══════ -->
-                <Border Style="{StaticResource SectionBlock}">
+                <Border Grid.Row="1" Style="{StaticResource SectionBlock}" Margin="0,0,0,0">
                     <StackPanel>
                         <TextBlock Text="COMPORTAMIENTO" Style="{StaticResource SectionLabel}"/>
 
                         <!-- Detection toggle -->
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,10">
-                            <CheckBox x:Name="DetectionToggle"
-                                      Style="{StaticResource BrutalistCheckBox}"
-                                      Content="DETECCIÓN ACTIVA"
-                                      IsChecked="True"
-                                      Checked="DetectionToggle_Changed"
-                                      Unchecked="DetectionToggle_Changed"/>
-                        </StackPanel>
+                        <CheckBox x:Name="DetectionToggle"
+                                  Style="{StaticResource BrutalistCheckBox}"
+                                  Content="DETECCIÓN ACTIVA"
+                                  IsChecked="True"
+                                  Margin="0,2,0,8"
+                                  Checked="DetectionToggle_Changed"
+                                  Unchecked="DetectionToggle_Changed"/>
 
                         <!-- Min text length -->
-                        <TextBlock Text="LONGITUD MÍNIMA DE TEXTO" Style="{StaticResource SectionLabel}"/>
-                        <Grid Margin="0,2,0,8" HorizontalAlignment="Stretch">
+                        <TextBlock Text="LONGITUD MÍNIMA DE TEXTO" Style="{StaticResource SectionLabel}" Margin="0,2,0,1"/>
+                        <Grid Margin="0,0,0,6" HorizontalAlignment="Stretch">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="75"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="MinLengthSlider"
                                     Grid.Column="0"
@@ -193,19 +202,19 @@
                             <TextBlock x:Name="MinLengthLabel"
                                        Grid.Column="1"
                                        Style="{StaticResource ValueText}"
-                                       Margin="10,0,0,0"
+                                       Margin="8,0,0,0"
                                        HorizontalAlignment="Right"
                                        VerticalAlignment="Center"
+                                       FontSize="11"
                                        Text="20 chars"/>
                         </Grid>
 
                         <!-- Debounce -->
-                        <TextBlock Text="DEBOUNCE (MS)" Style="{StaticResource SectionLabel}"
-                                   Margin="0,6,0,2"/>
-                        <Grid Margin="0,2,0,8" HorizontalAlignment="Stretch">
+                        <TextBlock Text="DEBOUNCE (MS)" Style="{StaticResource SectionLabel}" Margin="0,2,0,1"/>
+                        <Grid Margin="0,0,0,8" HorizontalAlignment="Stretch">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="80"/>
+                                <ColumnDefinition Width="75"/>
                             </Grid.ColumnDefinitions>
                             <Slider x:Name="DebounceSlider"
                                     Grid.Column="0"
@@ -220,45 +229,100 @@
                             <TextBlock x:Name="DebounceLabel"
                                        Grid.Column="1"
                                        Style="{StaticResource ValueText}"
-                                       Margin="10,0,0,0"
+                                       Margin="8,0,0,0"
                                        HorizontalAlignment="Right"
                                        VerticalAlignment="Center"
+                                       FontSize="11"
                                        Text="400 ms"/>
                         </Grid>
 
                         <!-- Save button -->
                         <Button Content="GUARDAR CONFIGURACIÓN"
                                 Style="{StaticResource BrutalistButton}"
-                                Margin="0,10,0,0"
                                 HorizontalAlignment="Left"
+                                Padding="14,7"
                                 Click="SaveConfigBtn_Click"/>
                     </StackPanel>
                 </Border>
 
-                <!-- ══════ BLOQUE LEYENDA DE COLORES ══════ -->
-                <Border Style="{StaticResource SectionBlock}">
-                    <StackPanel>
-                        <TextBlock Text="LEYENDA DE COLORES" Style="{StaticResource SectionLabel}"/>
-                        <TextBlock Text="Haz clic en el color para cambiarlo."
-                                   Style="{StaticResource ValueText}"
-                                   FontSize="11" Foreground="#888888"
-                                   Margin="0,0,0,10"/>
+            </Grid>
 
-                        <!-- Legend rows (responsive) -->
-                        <ItemsControl x:Name="LegendItems" HorizontalAlignment="Stretch">
+            <!-- ── RIGHT COLUMN: ESTADO, COLORES & HISTORIAL ── -->
+            <Grid Grid.Column="1" Margin="10,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- ══════ BLOQUE ESTADO ══════ -->
+                <Border Grid.Row="0" Style="{StaticResource SectionBlock}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="ESTADO EN TIEMPO REAL" Style="{StaticResource SectionLabel}"/>
+                        <Grid Margin="0,2,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Circular status chip reflecting tray icon color(s) -->
+                            <Border x:Name="StatusChip"
+                                    Grid.Column="0"
+                                    Width="16" Height="16"
+                                    CornerRadius="8"
+                                    BorderBrush="#FFFFFF"
+                                    BorderThickness="1.5"
+                                    Background="#FFFFFF"
+                                    Margin="0,2,10,0"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock x:Name="StatusTextBlock"
+                                       Grid.Column="1"
+                                       Style="{StaticResource StatusText}"
+                                       FontSize="14"
+                                       VerticalAlignment="Center"
+                                       Text="{Binding StatusText, Mode=OneWay}"
+                                       DataContext="{x:Static local:AppStateProxy.Instance}"/>
+                        </Grid>
+                        <TextBlock x:Name="LastAnswerLabel"
+                                   Style="{StaticResource ValueText}"
+                                   Margin="0,6,0,0"
+                                   FontSize="12"
+                                   Foreground="#CCCCCC"
+                                   Text="{Binding LastAnswerDisplay, StringFormat='Última respuesta: \{0\}',
+                                                  Mode=OneWay,
+                                                  FallbackValue='Última respuesta: —'}"
+                                   DataContext="{x:Static local:AppStateProxy.Instance}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- ══════ BLOQUE LEYENDA DE COLORES ══════ -->
+                <Border Grid.Row="1" Style="{StaticResource SectionBlock}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="COLORES DE OPCIONES" Style="{StaticResource SectionLabel}"/>
+                            <TextBlock Grid.Column="1" Text="Click para cambiar"
+                                       Style="{StaticResource ValueText}"
+                                       FontSize="10" Foreground="#777777"/>
+                        </Grid>
+
+                        <!-- Legend rows (compact, responsive) -->
+                        <ItemsControl x:Name="LegendItems" HorizontalAlignment="Stretch" Margin="0,2,0,4">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,3" HorizontalAlignment="Stretch">
+                                    <Grid Margin="0,2" HorizontalAlignment="Stretch">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="32"/>
+                                            <ColumnDefinition Width="28"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="70"/>
                                         </Grid.ColumnDefinitions>
                                         <!-- Letter label -->
                                         <TextBlock Grid.Column="0"
                                                    Text="{Binding Letter}"
                                                    FontWeight="Bold"
-                                                   FontSize="14"
+                                                   FontSize="13"
                                                    Foreground="#FFFFFF"
                                                    FontFamily="{StaticResource MonoFont}"
                                                    VerticalAlignment="Center"/>
@@ -266,8 +330,8 @@
                                         <Button Grid.Column="1"
                                                 Background="{Binding ColorBrush}"
                                                 BorderBrush="#FFFFFF"
-                                                BorderThickness="2"
-                                                Height="26"
+                                                BorderThickness="1.5"
+                                                Height="22"
                                                 HorizontalAlignment="Stretch"
                                                 Cursor="Hand"
                                                 Click="ColorChip_Click"
@@ -277,11 +341,11 @@
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding HexColor}"
                                                    Style="{StaticResource ValueText}"
-                                                   FontSize="11"
+                                                   FontSize="10"
                                                    Foreground="#888888"
                                                    VerticalAlignment="Center"
                                                    HorizontalAlignment="Right"
-                                                   Margin="10,0,0,0"/>
+                                                   Margin="8,0,0,0"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -289,61 +353,78 @@
 
                         <Button Content="RESTAURAR COLORES POR DEFECTO"
                                 Style="{StaticResource BrutalistButton}"
-                                Margin="0,12,0,0"
+                                Margin="0,4,0,0"
+                                Padding="10,5"
+                                FontSize="10"
                                 HorizontalAlignment="Left"
                                 Click="ResetColorsBtn_Click"/>
                     </StackPanel>
                 </Border>
 
                 <!-- ══════ BLOQUE HISTORIAL ══════ -->
-                <Border Style="{StaticResource SectionBlock}">
-                    <StackPanel>
-                        <!-- Collapsible header -->
-                        <Button x:Name="HistoryToggleBtn"
-                                Content="+ HISTORIAL"
-                                Style="{StaticResource BrutalistButton}"
-                                HorizontalAlignment="Left"
-                                Padding="0,0,0,0"
-                                BorderThickness="0"
-                                FontSize="10"
-                                FontWeight="Bold"
-                                Click="HistoryToggleBtn_Click"/>
+                <Border Grid.Row="2" Style="{StaticResource SectionBlock}" Margin="0,0,0,0" VerticalAlignment="Stretch">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                        <StackPanel x:Name="HistoryPanel" Visibility="Collapsed" Margin="0,10,0,0" HorizontalAlignment="Stretch">
+                        <!-- Header toggle -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="HistoryToggleBtn"
+                                    Grid.Column="0"
+                                    Content="− HISTORIAL"
+                                    Style="{StaticResource BrutalistButton}"
+                                    HorizontalAlignment="Left"
+                                    Padding="0"
+                                    BorderThickness="0"
+                                    FontSize="10"
+                                    FontWeight="Bold"
+                                    Click="HistoryToggleBtn_Click"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="(máx. 10)"
+                                       Style="{StaticResource ValueText}"
+                                       FontSize="10" Foreground="#555555"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Grid x:Name="HistoryPanel" Grid.Row="1" Margin="0,6,0,0">
                             <ListView x:Name="HistoryList"
                                       Background="#000000"
-                                      BorderThickness="0"
-                                      MaxHeight="220"
+                                      BorderThickness="1"
+                                      BorderBrush="#222222"
                                       Foreground="#FFFFFF"
                                       FontFamily="{StaticResource MonoFont}"
-                                      FontSize="11"
+                                      FontSize="10"
                                       HorizontalAlignment="Stretch"
                                       ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                 <ListView.View>
                                     <GridView>
-                                        <GridViewColumn Header="HORA"   Width="70"/>
-                                        <GridViewColumn Header="RESP."  Width="70"/>
-                                        <GridViewColumn Header="PREGUNTA" Width="360"/>
+                                        <GridViewColumn Header="HORA"   Width="65"/>
+                                        <GridViewColumn Header="RESP."  Width="55"/>
+                                        <GridViewColumn Header="PREGUNTA" Width="260"/>
                                     </GridView>
                                 </ListView.View>
                             </ListView>
-                            <TextBlock Text="(máx. 10 entradas)"
-                                       Style="{StaticResource ValueText}"
-                                       FontSize="10" Foreground="#555555"
-                                       Margin="0,6,0,0"/>
-                        </StackPanel>
-                    </StackPanel>
+                        </Grid>
+                    </Grid>
                 </Border>
 
-                <!-- ══════ FOOTER ══════ -->
-                <TextBlock Text="CLIP-ANS v1.0 — CTRL+C PARA ACTIVAR"
-                           Style="{StaticResource ValueText}"
-                           FontSize="10"
-                           Foreground="#444444"
-                           HorizontalAlignment="Center"
-                           Margin="0,8,0,0"/>
-
-            </StackPanel>
+            </Grid>
         </Grid>
-    </ScrollViewer>
+
+        <!-- ══════ FOOTER ══════ -->
+        <TextBlock Grid.Row="2"
+                   Text="CLIP-ANS v1.1 — COPIA PREGUNTA CON CTRL+C PARA ACTIVAR | MINIMIZA AL TRAY"
+                   Style="{StaticResource ValueText}"
+                   FontSize="10"
+                   Foreground="#444444"
+                   HorizontalAlignment="Center"
+                   Margin="0,8,0,0"/>
+
+    </Grid>
 </Window>

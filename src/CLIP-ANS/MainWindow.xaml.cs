@@ -439,12 +439,15 @@ public partial class MainWindow : Window
         _config.Model = (ModelCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString()
                         ?? _config.Model;
 
-        // Save API key
-        var key = (_showingKey ? ApiKeyPlain.Text : ApiKeyBox.Password).Trim();
-        if (!string.IsNullOrWhiteSpace(key) && !key.Contains("..."))
+        // Save API key if modified
+        if (_apiKeyDirty)
         {
-            _configService.SaveApiKey(_config.Provider, key);
-            _apiKeyDirty = false;
+            var key = (_showingKey ? ApiKeyPlain.Text : ApiKeyBox.Password).Trim();
+            if (!string.IsNullOrWhiteSpace(key) && !key.Contains("..."))
+            {
+                _configService.SaveApiKey(_config.Provider, key);
+                _apiKeyDirty = false;
+            }
         }
 
         // Fire hot-reload
