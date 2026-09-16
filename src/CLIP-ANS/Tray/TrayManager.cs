@@ -115,7 +115,7 @@ public sealed class TrayManager : IDisposable
 
         return colors.Count == 1
             ? IconRenderer.CreateAnswerIcon(colors[0])
-            : IconRenderer.CreateBlendIcon(colors);
+            : IconRenderer.CreateMultiAnswerIcon(colors);
     }
 
     private void SetIcon(Icon icon)

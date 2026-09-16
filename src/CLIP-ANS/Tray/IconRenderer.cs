@@ -6,12 +6,13 @@ using QuizHelper.Models;
 namespace QuizHelper.Tray;
 
 /// <summary>
-/// Renders the tray icon as a sleek, professional vector-styled clipboard badge.
+/// Renders system tray icons as clean, minimalist geometric emblems.
 /// Supports:
-///   - Single color (one answer)
-///   - Blend (multiple answers → averaged RGB)
-///   - Special states: idle (clean white outline on transparent), querying (cyan pulse), error (dim warning), paused (dark outline)
-/// Uses direct PNG-in-ICO streaming for 100% crystal-clear 32-bit ARGB transparency with zero GDI handle leaks.
+///   - Single answer: solid color circle with crisp border.
+///   - Multiple answers (e.g. A, B, D): circle divided into N equal sectors (e.g. 3 parts of 120°),
+///     each part filled with its corresponding answer color.
+///   - Special states: Idle (clean outline + center dot), Querying (cyan), Error (red), Paused (dashed).
+/// Uses direct PNG-in-ICO binary streaming for 100% crystal-clear 32-bit ARGB transparency with zero GDI leaks.
 /// </summary>
 public static class IconRenderer
 {
@@ -19,105 +20,161 @@ public static class IconRenderer
 
     // ── Public API ────────────────────────────────────────────────────────────
 
-    /// <summary>Creates an icon for the idle/waiting state (crisp white outline on transparent background).</summary>
-    public static Icon CreateIdleIcon() =>
-        RenderIcon(Color.Transparent, Color.White, filled: false);
+    /// <summary>Creates an icon for the idle/waiting state (minimalist white ring with center dot).</summary>
+    public static Icon CreateIdleIcon()
+    {
+        using var bmp = new Bitmap(Size, Size, PixelFormat.Format32bppArgb);
+        using var g   = Graphics.FromImage(bmp);
+        ConfigureGraphics(g);
+
+        float margin = 3.5f;
+        var rect = new RectangleF(margin, margin, Size - 2 * margin, Size - 2 * margin);
+
+        // Crisp white ring
+        using var pen = new Pen(Color.White, 1.8f);
+        g.DrawEllipse(pen, rect);
+
+        // Center dot
+        float dotR = 2.5f;
+        using var dotBrush = new SolidBrush(Color.White);
+        g.FillEllipse(dotBrush, Size / 2f - dotR, Size / 2f - dotR, dotR * 2, dotR * 2);
+
+        return BitmapToIcon(bmp);
+    }
 
     /// <summary>Creates an icon for a single answer letter.</summary>
-    public static Icon CreateAnswerIcon(Color answerColor) =>
-        RenderIcon(answerColor, Color.White, filled: true);
+    public static Icon CreateAnswerIcon(Color answerColor)
+    {
+        using var bmp = new Bitmap(Size, Size, PixelFormat.Format32bppArgb);
+        using var g   = Graphics.FromImage(bmp);
+        ConfigureGraphics(g);
+
+        float margin = 3f;
+        var rect = new RectangleF(margin, margin, Size - 2 * margin, Size - 2 * margin);
+
+        using var brush = new SolidBrush(answerColor);
+        g.FillEllipse(brush, rect);
+
+        using var borderPen = new Pen(Color.White, 1.8f);
+        g.DrawEllipse(borderPen, rect);
+
+        return BitmapToIcon(bmp);
+    }
 
     /// <summary>
-    /// Creates an icon for multiple answers using color blending.
-    /// Blends R, G, B channels proportionally.
+    /// Creates an icon divided into N equal circular sectors (pie slices),
+    /// each sector painted with its corresponding answer color (e.g. A, B, D divided in 3 parts).
     /// </summary>
-    public static Icon CreateBlendIcon(IReadOnlyList<Color> colors)
+    public static Icon CreateMultiAnswerIcon(IReadOnlyList<Color> colors)
     {
         if (colors.Count == 0) return CreateIdleIcon();
         if (colors.Count == 1) return CreateAnswerIcon(colors[0]);
 
-        int r = (int)colors.Average(c => c.R);
-        int g = (int)colors.Average(c => c.G);
-        int b = (int)colors.Average(c => c.B);
-        return CreateAnswerIcon(Color.FromArgb(255, r, g, b));
+        using var bmp = new Bitmap(Size, Size, PixelFormat.Format32bppArgb);
+        using var g   = Graphics.FromImage(bmp);
+        ConfigureGraphics(g);
+
+        float margin = 3f;
+        var rect = new RectangleF(margin, margin, Size - 2 * margin, Size - 2 * margin);
+        float cx = Size / 2f;
+        float cy = Size / 2f;
+        float radius = (Size - 2 * margin) / 2f;
+
+        int count = colors.Count;
+        float sweepAngle = 360f / count;
+
+        // 1. Draw each sector starting from top (-90 degrees)
+        for (int i = 0; i < count; i++)
+        {
+            float startAngle = -90f + (i * sweepAngle);
+            using var brush = new SolidBrush(colors[i]);
+            g.FillPie(brush, rect.X, rect.Y, rect.Width, rect.Height, startAngle, sweepAngle);
+        }
+
+        // 2. Draw clean separating lines between sectors
+        using var sepPen = new Pen(Color.FromArgb(220, 20, 20, 20), 1.5f);
+        for (int i = 0; i < count; i++)
+        {
+            float angleDeg = -90f + (i * sweepAngle);
+            float angleRad = (float)(angleDeg * Math.PI / 180.0);
+            float x2 = cx + radius * (float)Math.Cos(angleRad);
+            float y2 = cy + radius * (float)Math.Sin(angleRad);
+            g.DrawLine(sepPen, cx, cy, x2, y2);
+        }
+
+        // 3. Crisp outer border
+        using var borderPen = new Pen(Color.White, 1.8f);
+        g.DrawEllipse(borderPen, rect);
+
+        return BitmapToIcon(bmp);
     }
 
-    /// <summary>Creates an icon for the querying state (vibrant cyan).</summary>
-    public static Icon CreateQueryingIcon() =>
-        RenderIcon(Color.FromArgb(0, 225, 255), Color.White, filled: true);
-
-    /// <summary>Creates an icon for the error/timeout state (dark gray with white border).</summary>
-    public static Icon CreateErrorIcon() =>
-        RenderIcon(Color.FromArgb(80, 80, 80), Color.FromArgb(255, 100, 100), filled: true);
-
-    /// <summary>Creates an icon for the paused state (dim gray outline).</summary>
-    public static Icon CreatePausedIcon() =>
-        RenderIcon(Color.Transparent, Color.FromArgb(120, 120, 120), filled: false);
-
-    // ── Rendering ─────────────────────────────────────────────────────────────
-
-    private static Icon RenderIcon(Color fillColor, Color outlineColor, bool filled)
+    /// <summary>Creates an icon for the querying state (vibrant cyan circle).</summary>
+    public static Icon CreateQueryingIcon()
     {
         using var bmp = new Bitmap(Size, Size, PixelFormat.Format32bppArgb);
         using var g   = Graphics.FromImage(bmp);
+        ConfigureGraphics(g);
 
+        float margin = 3f;
+        var rect = new RectangleF(margin, margin, Size - 2 * margin, Size - 2 * margin);
+
+        using var brush = new SolidBrush(Color.FromArgb(0, 230, 255));
+        g.FillEllipse(brush, rect);
+
+        using var borderPen = new Pen(Color.White, 1.8f);
+        g.DrawEllipse(borderPen, rect);
+
+        return BitmapToIcon(bmp);
+    }
+
+    /// <summary>Creates an icon for the error/timeout state (vibrant red circle).</summary>
+    public static Icon CreateErrorIcon()
+    {
+        using var bmp = new Bitmap(Size, Size, PixelFormat.Format32bppArgb);
+        using var g   = Graphics.FromImage(bmp);
+        ConfigureGraphics(g);
+
+        float margin = 3f;
+        var rect = new RectangleF(margin, margin, Size - 2 * margin, Size - 2 * margin);
+
+        using var brush = new SolidBrush(Color.FromArgb(235, 60, 60));
+        g.FillEllipse(brush, rect);
+
+        using var borderPen = new Pen(Color.White, 1.8f);
+        g.DrawEllipse(borderPen, rect);
+
+        return BitmapToIcon(bmp);
+    }
+
+    /// <summary>Creates an icon for the paused state (dashed dim gray outline).</summary>
+    public static Icon CreatePausedIcon()
+    {
+        using var bmp = new Bitmap(Size, Size, PixelFormat.Format32bppArgb);
+        using var g   = Graphics.FromImage(bmp);
+        ConfigureGraphics(g);
+
+        float margin = 3.5f;
+        var rect = new RectangleF(margin, margin, Size - 2 * margin, Size - 2 * margin);
+
+        using var pen = new Pen(Color.FromArgb(130, 130, 130), 1.8f)
+        {
+            DashStyle = DashStyle.Dash
+        };
+        g.DrawEllipse(pen, rect);
+
+        return BitmapToIcon(bmp);
+    }
+
+    // ── Helper methods ────────────────────────────────────────────────────────
+
+    private static void ConfigureGraphics(Graphics g)
+    {
         g.SmoothingMode      = SmoothingMode.AntiAlias;
         g.CompositingQuality = CompositingQuality.HighQuality;
         g.InterpolationMode  = InterpolationMode.HighQualityBicubic;
         g.PixelOffsetMode    = PixelOffsetMode.HighQuality;
         g.Clear(Color.Transparent);
-
-        // 1. Clipboard main body (smooth rounded rectangle)
-        var bodyRect = new RectangleF(4.5f, 6.5f, 23f, 22f);
-        using (var bodyPath = CreateRoundedRectangle(bodyRect, 4f))
-        {
-            if (filled && fillColor != Color.Transparent)
-            {
-                using var fillBrush = new SolidBrush(fillColor);
-                g.FillPath(fillBrush, bodyPath);
-            }
-
-            using var outlinePen = new Pen(outlineColor, 1.8f);
-            g.DrawPath(outlinePen, bodyPath);
-        }
-
-        // 2. Top clip (rounded tab at center top)
-        var clipRect = new RectangleF(10.5f, 2.5f, 11f, 6f);
-        using (var clipPath = CreateRoundedRectangle(clipRect, 2f))
-        {
-            Color clipFill = filled && fillColor != Color.Transparent
-                ? fillColor
-                : Color.FromArgb(20, 24, 30);
-
-            using var clipBrush = new SolidBrush(clipFill);
-            g.FillPath(clipBrush, clipPath);
-
-            using var clipPen = new Pen(outlineColor, 1.4f);
-            g.DrawPath(clipPen, clipPath);
-        }
-
-        // 3. Central accent dot / check for idle or answer
-        if (!filled)
-        {
-            // Subtle inner line on idle
-            using var linePen = new Pen(Color.FromArgb(180, outlineColor), 1.2f);
-            g.DrawLine(linePen, 9f, 14f, 23f, 14f);
-            g.DrawLine(linePen, 9f, 18f, 19f, 18f);
-        }
-
-        return BitmapToIcon(bmp);
-    }
-
-    private static GraphicsPath CreateRoundedRectangle(RectangleF rect, float radius)
-    {
-        var path = new GraphicsPath();
-        float diameter = radius * 2;
-        path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
-        path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
-        path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
-        path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
-        path.CloseFigure();
-        return path;
     }
 
     /// <summary>
@@ -141,12 +198,12 @@ public static class IconRenderer
         // Directory Entry (16 bytes)
         writer.Write((byte)(bmp.Width >= 256 ? 0 : bmp.Width));
         writer.Write((byte)(bmp.Height >= 256 ? 0 : bmp.Height));
-        writer.Write((byte)0);  // colors
-        writer.Write((byte)0);  // reserved
-        writer.Write((ushort)1); // color planes
+        writer.Write((byte)0);   // colors
+        writer.Write((byte)0);   // reserved
+        writer.Write((ushort)1);  // color planes
         writer.Write((ushort)32); // bits per pixel
         writer.Write((uint)pngBytes.Length); // payload byte length
-        writer.Write((uint)22); // offset (6 + 16 = 22)
+        writer.Write((uint)22);  // offset (6 + 16 = 22)
 
         // PNG payload
         writer.Write(pngBytes);

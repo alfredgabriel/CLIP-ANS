@@ -135,23 +135,22 @@ public partial class MainWindow : Window
         var status = AppState.Instance.Status;
         var config = _config;
 
-        System.Windows.Media.Color chipColor = status switch
+        StatusChip.Background = status switch
         {
-            AppStatus.Querying => Colors.Cyan,
-            AppStatus.Error    => Colors.Gray,
-            AppStatus.Paused   => Colors.DarkGray,
-            AppStatus.Answered => GetAnswerChipColor(config),
-            _                  => Colors.White,
+            AppStatus.Querying => new SolidColorBrush(Colors.Cyan),
+            AppStatus.Error    => new SolidColorBrush(Colors.Gray),
+            AppStatus.Paused   => new SolidColorBrush(Colors.DarkGray),
+            AppStatus.Answered => BuildAnswerBrush(config),
+            _                  => new SolidColorBrush(Colors.White),
         };
-        StatusChip.Background = new SolidColorBrush(chipColor);
     }
 
-    private System.Windows.Media.Color GetAnswerChipColor(AppConfig config)
+    private System.Windows.Media.Brush BuildAnswerBrush(AppConfig config)
     {
         var answers = AppState.Instance.LastAnswers;
-        if (answers.Count == 0) return Colors.White;
+        if (answers.Count == 0) return new SolidColorBrush(Colors.White);
 
-        List<System.Windows.Media.Color> colors = answers
+        var colors = answers
             .Select(a =>
             {
                 var hex = config.ColorMap.TryGetValue(a.ToString(), out var h) ? h : "#FFFFFF";
@@ -159,13 +158,26 @@ public partial class MainWindow : Window
                 catch { return Colors.White; }
             }).ToList();
 
-        if (colors.Count == 1) return colors[0];
+        if (colors.Count == 1)
+            return new SolidColorBrush(colors[0]);
 
-        // Blend
-        return System.Windows.Media.Color.FromRgb(
-            (byte)colors.Average(c => c.R),
-            (byte)colors.Average(c => c.G),
-            (byte)colors.Average(c => c.B));
+        // Sharp gradient stops dividing into N equal vertical slices
+        var brush = new LinearGradientBrush
+        {
+            StartPoint = new System.Windows.Point(0, 0),
+            EndPoint   = new System.Windows.Point(1, 0)
+        };
+
+        double step = 1.0 / colors.Count;
+        for (int i = 0; i < colors.Count; i++)
+        {
+            double startOffset = i * step;
+            double endOffset   = (i + 1) * step;
+            brush.GradientStops.Add(new GradientStop(colors[i], startOffset));
+            brush.GradientStops.Add(new GradientStop(colors[i], endOffset));
+        }
+
+        return brush;
     }
 
     // ── Event handlers — Provider / Model ────────────────────────────────────
