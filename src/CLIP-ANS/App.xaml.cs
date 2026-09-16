@@ -30,7 +30,7 @@ public partial class App : System.Windows.Application
 
         try
         {
-            SetCurrentProcessExplicitAppUserModelID("CLIPANS.App.v1");
+            SetCurrentProcessExplicitAppUserModelID("CLIPANS.App.v2");
         }
         catch { }
 

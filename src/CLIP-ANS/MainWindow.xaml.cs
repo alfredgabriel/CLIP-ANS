@@ -57,12 +57,6 @@ public partial class MainWindow : Window
     {
         _config = _configService.Load();
         InitializeComponent();
-        try
-        {
-            var uri = new Uri("pack://application:,,,/Resources/app_icon.ico", UriKind.RelativeOrAbsolute);
-            Icon = System.Windows.Media.Imaging.BitmapFrame.Create(uri);
-        }
-        catch { }
         PopulateFromConfig();
         AppState.Instance.PropertyChanged += (_, e) =>
         {
@@ -90,12 +84,22 @@ public partial class MainWindow : Window
     private const IntPtr ICON_SMALL = 0;
     private const IntPtr ICON_BIG = 1;
 
+    private System.Drawing.Icon? _wndIconBig;
+    private System.Drawing.Icon? _wndIconSmall;
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
+        ApplyWindowIcons();
+    }
+
+    private void ApplyWindowIcons()
+    {
         try
         {
             var hwnd = new WindowInteropHelper(this).Handle;
+            Stream? iconStream = null;
+
             var candidates = new[]
             {
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_icon.ico"),
@@ -108,12 +112,42 @@ public partial class MainWindow : Window
             {
                 if (File.Exists(p))
                 {
-                    using var iconBig = new System.Drawing.Icon(p, 32, 32);
-                    SendMessage(hwnd, WM_SETICON, ICON_BIG, iconBig.Handle);
-
-                    using var iconSmall = new System.Drawing.Icon(p, 16, 16);
-                    SendMessage(hwnd, WM_SETICON, ICON_SMALL, iconSmall.Handle);
+                    iconStream = File.OpenRead(p);
                     break;
+                }
+            }
+
+            if (iconStream == null)
+            {
+                try
+                {
+                    var sri = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/Resources/app_icon.ico"));
+                    iconStream = sri?.Stream;
+                }
+                catch { }
+            }
+
+            if (iconStream != null)
+            {
+                using (iconStream)
+                {
+                    var ms = new MemoryStream();
+                    iconStream.CopyTo(ms);
+
+                    ms.Position = 0;
+                    _wndIconBig = new System.Drawing.Icon(ms, 32, 32);
+
+                    ms.Position = 0;
+                    _wndIconSmall = new System.Drawing.Icon(ms, 16, 16);
+
+                    SendMessage(hwnd, WM_SETICON, ICON_BIG, _wndIconBig.Handle);
+                    SendMessage(hwnd, WM_SETICON, ICON_SMALL, _wndIconSmall.Handle);
+
+                    ms.Position = 0;
+                    Icon = System.Windows.Media.Imaging.BitmapFrame.Create(
+                        ms,
+                        System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+                        System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
                 }
             }
         }

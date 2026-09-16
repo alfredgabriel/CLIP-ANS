@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:QuizHelper"
         Title="CLIP-ANS"
-        Icon="Resources/app_icon.ico"
         Width="920" MinWidth="780"
         Height="640" MinHeight="520"
         Background="#000000"
