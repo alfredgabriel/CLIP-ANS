@@ -176,7 +176,6 @@
                         <CheckBox x:Name="TextDetectionToggle"
                                   Style="{StaticResource BrutalistCheckBox}"
                                   Content="DETECTAR TEXTO COPIADO"
-                                  IsChecked="True"
                                   Margin="0,2,0,3"
                                   Checked="TextDetectionToggle_Changed"
                                   Unchecked="TextDetectionToggle_Changed"/>
@@ -185,7 +184,6 @@
                         <CheckBox x:Name="ScreenshotToggle"
                                   Style="{StaticResource BrutalistCheckBox}"
                                   Content="DETECTAR CAPTURAS (OCR)"
-                                  IsChecked="True"
                                   Margin="0,0,0,3"
                                   Checked="ScreenshotToggle_Changed"
                                   Unchecked="ScreenshotToggle_Changed"/>
@@ -194,7 +192,6 @@
                         <CheckBox x:Name="NotificationsToggle"
                                   Style="{StaticResource BrutalistCheckBox}"
                                   Content="NOTIFICACIONES DE WINDOWS"
-                                  IsChecked="True"
                                   Margin="0,0,0,6"
                                   Checked="NotificationsToggle_Changed"
                                   Unchecked="NotificationsToggle_Changed"/>

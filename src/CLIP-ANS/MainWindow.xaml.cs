@@ -53,12 +53,14 @@ public partial class MainWindow : Window
     private AppConfig _config = new();
     private bool _apiKeyDirty;
     private bool _showingKey;
+    private bool _initialized;
     private ObservableCollection<LegendItem> _legendItems = [];
 
     public MainWindow()
     {
         _config = _configService.Load();
         InitializeComponent();
+        _initialized = true;
         PopulateFromConfig();
         AppState.Instance.PropertyChanged += (_, e) =>
         {
@@ -229,6 +231,7 @@ public partial class MainWindow : Window
 
     private void UpdateStatusChip()
     {
+        if (StatusChip == null) return;
         var status = AppState.Instance.Status;
         var config = _config;
 
@@ -512,6 +515,7 @@ public partial class MainWindow : Window
 
     private void MinLengthSlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (!_initialized || _config == null) return;
         _config.MinTextLength = (int)e.NewValue;
         if (MinLengthLabel != null)
             MinLengthLabel.Text = $"{(int)e.NewValue} chars";
@@ -519,6 +523,7 @@ public partial class MainWindow : Window
 
     private void DebounceSlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
+        if (!_initialized || _config == null) return;
         _config.DebounceMs = (int)e.NewValue;
         if (DebounceLabel != null)
             DebounceLabel.Text = $"{(int)e.NewValue} ms";
@@ -526,27 +531,28 @@ public partial class MainWindow : Window
 
     private void TextDetectionToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (_config == null) return;
+        if (!_initialized || _config == null) return;
         _config.DetectText = TextDetectionToggle.IsChecked ?? true;
         ApplyDetectionState();
     }
 
     private void ScreenshotToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (_config == null) return;
+        if (!_initialized || _config == null) return;
         _config.DetectScreenshots = ScreenshotToggle.IsChecked ?? true;
         ApplyDetectionState();
     }
 
     private void NotificationsToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (_config == null) return;
+        if (!_initialized || _config == null) return;
         _config.ShowNotifications = NotificationsToggle.IsChecked ?? true;
         _configService.Save(_config);
     }
 
     private void ApplyDetectionState()
     {
+        if (_config == null) return;
         var bothDisabled = !_config.DetectText && !_config.DetectScreenshots;
         AppState.Instance.DetectionEnabled = !bothDisabled;
 
