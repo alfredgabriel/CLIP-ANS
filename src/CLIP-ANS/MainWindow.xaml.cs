@@ -1,9 +1,12 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
+using System.Windows.Interop;
 using System.Windows.Media;
 using QuizHelper.AI;
 using QuizHelper.Core;
@@ -78,6 +81,43 @@ public partial class MainWindow : Window
         // Always-on: hide instead of close
         e.Cancel = true;
         Hide();
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+    private const uint WM_SETICON = 0x0080;
+    private const IntPtr ICON_SMALL = 0;
+    private const IntPtr ICON_BIG = 1;
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        try
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            var candidates = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app_icon.ico"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Resources", "app_icon.ico"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Resources", "app_icon.ico"),
+                Path.Combine(Directory.GetCurrentDirectory(), "src", "CLIP-ANS", "Resources", "app_icon.ico")
+            };
+
+            foreach (var p in candidates)
+            {
+                if (File.Exists(p))
+                {
+                    using var iconBig = new System.Drawing.Icon(p, 32, 32);
+                    SendMessage(hwnd, WM_SETICON, ICON_BIG, iconBig.Handle);
+
+                    using var iconSmall = new System.Drawing.Icon(p, 16, 16);
+                    SendMessage(hwnd, WM_SETICON, ICON_SMALL, iconSmall.Handle);
+                    break;
+                }
+            }
+        }
+        catch { }
     }
 
     // ── Initial population ────────────────────────────────────────────────────

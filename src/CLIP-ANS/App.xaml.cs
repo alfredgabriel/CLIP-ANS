@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using QuizHelper.AI;
 using QuizHelper.Core;
@@ -14,6 +15,9 @@ namespace QuizHelper;
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    [DllImport("shell32.dll", SetLastError = true)]
+    private static extern void SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string AppID);
+
     private TrayManager?    _tray;
     private MainWindow?     _mainWindow;
     private ClipboardWatcher? _watcher;
@@ -23,6 +27,12 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        try
+        {
+            SetCurrentProcessExplicitAppUserModelID("CLIPANS.App.v1");
+        }
+        catch { }
 
         try
         {
