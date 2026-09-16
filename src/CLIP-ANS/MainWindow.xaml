@@ -86,8 +86,8 @@
                                           Style="{StaticResource BrutalistComboBox}"
                                           HorizontalAlignment="Stretch"
                                           SelectionChanged="ProviderCombo_SelectionChanged">
-                                    <ComboBoxItem Content="GROQ"   Tag="groq"/>
-                                    <ComboBoxItem Content="OPENAI" Tag="openai"/>
+                                    <ComboBoxItem Content="GROQ"   Tag="groq" Foreground="#000000"/>
+                                    <ComboBoxItem Content="OPENAI" Tag="openai" Foreground="#000000"/>
                                 </ComboBox>
                             </StackPanel>
 
@@ -177,9 +177,18 @@
                                   Style="{StaticResource BrutalistCheckBox}"
                                   Content="DETECCIÓN ACTIVA"
                                   IsChecked="True"
-                                  Margin="0,2,0,8"
+                                  Margin="0,2,0,4"
                                   Checked="DetectionToggle_Changed"
                                   Unchecked="DetectionToggle_Changed"/>
+
+                        <!-- Screenshot / OCR toggle -->
+                        <CheckBox x:Name="ScreenshotToggle"
+                                  Style="{StaticResource BrutalistCheckBox}"
+                                  Content="DETECTAR CAPTURAS DE PANTALLA (OCR)"
+                                  IsChecked="True"
+                                  Margin="0,0,0,8"
+                                  Checked="ScreenshotToggle_Changed"
+                                  Unchecked="ScreenshotToggle_Changed"/>
 
                         <!-- Min text length -->
                         <TextBlock Text="LONGITUD MÍNIMA DE TEXTO" Style="{StaticResource SectionLabel}" Margin="0,2,0,1"/>
@@ -313,9 +322,10 @@
                                 <DataTemplate>
                                     <Grid Margin="0,2" HorizontalAlignment="Stretch">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="28"/>
+                                            <ColumnDefinition Width="26"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="22"/>
                                         </Grid.ColumnDefinitions>
                                         <!-- Letter label -->
                                         <TextBlock Grid.Column="0"
@@ -328,8 +338,8 @@
                                         <!-- Color chip (clickable, fills width) -->
                                         <Button Grid.Column="1"
                                                 Background="{Binding ColorBrush}"
-                                                BorderBrush="#FFFFFF"
-                                                BorderThickness="1.5"
+                                                BorderBrush="#444444"
+                                                BorderThickness="1"
                                                 Height="22"
                                                 HorizontalAlignment="Stretch"
                                                 Cursor="Hand"
@@ -340,23 +350,48 @@
                                         <TextBlock Grid.Column="2"
                                                    Text="{Binding HexColor}"
                                                    Style="{StaticResource ValueText}"
-                                                   FontSize="10"
+                                                   FontSize="9"
                                                    Foreground="#888888"
                                                    VerticalAlignment="Center"
                                                    HorizontalAlignment="Right"
-                                                   Margin="8,0,0,0"/>
+                                                   Margin="4,0,0,0"/>
+                                        <!-- Delete button -->
+                                        <Button Grid.Column="3"
+                                                Content="×"
+                                                Width="20" Height="20"
+                                                Margin="2,0,0,0"
+                                                Padding="0"
+                                                FontSize="13"
+                                                FontWeight="Bold"
+                                                Foreground="#FF4444"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Cursor="Hand"
+                                                Click="DeleteOptionBtn_Click"
+                                                Tag="{Binding Letter}"
+                                                ToolTip="Eliminar opción"
+                                                Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <Button Content="RESTAURAR COLORES POR DEFECTO"
-                                Style="{StaticResource BrutalistButton}"
-                                Margin="0,4,0,0"
-                                Padding="10,5"
-                                FontSize="10"
-                                HorizontalAlignment="Left"
-                                Click="ResetColorsBtn_Click"/>
+                        <!-- Bottom action buttons -->
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                            <Button Content="+ AÑADIR OPCIÓN"
+                                    Style="{StaticResource BrutalistButton}"
+                                    Padding="10,5"
+                                    FontSize="10"
+                                    Margin="0,0,6,0"
+                                    Click="AddOptionBtn_Click"
+                                    ToolTip="Añade la siguiente letra disponible (F, G, H...)"/>
+                            <Button Content="RESTAURAR"
+                                    Style="{StaticResource BrutalistButton}"
+                                    Padding="10,5"
+                                    FontSize="10"
+                                    Click="ResetColorsBtn_Click"
+                                    ToolTip="Restaurar colores por defecto (A-F)"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

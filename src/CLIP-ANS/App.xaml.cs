@@ -150,28 +150,45 @@ public partial class App : System.Windows.Application
         try
         {
             var response = await _aiClient.AskAsync(text, ct);
-            var answers  = AnswerParser.Parse(response);
+            var config   = state.Config ?? new AppConfig();
+            var result   = AnswerParser.Parse(response, config.ColorMap.Keys);
 
-            if (AnswerParser.IsValid(answers))
+            if (AnswerParser.IsValid(result))
             {
-                state.LastAnswers = answers;
-                state.Status      = AppStatus.Answered;
+                state.IsDirectAnswer = !result.IsMultipleChoice;
 
-                // Add to history
-                var config     = state.Config ?? new AppConfig();
-                var firstColor = answers.Count > 0
-                    ? IconRenderer.ParseHexColor(
-                        config.ColorMap.TryGetValue(answers[0].ToString(), out var h) ? h : "#FFFFFF")
-                    : System.Drawing.Color.White;
-
-                state.AddHistory(new HistoryEntry
+                if (result.IsMultipleChoice)
                 {
-                    Timestamp       = DateTime.Now,
-                    QuestionPreview = text.Length > 80 ? text[..80] + "…" : text,
-                    Answers         = answers,
-                    AnswerColor     = System.Windows.Media.Color.FromArgb(
-                        firstColor.A, firstColor.R, firstColor.G, firstColor.B),
-                });
+                    state.LastAnswers = result.Letters;
+                    var firstColor = result.Letters.Count > 0
+                        ? IconRenderer.ParseHexColor(
+                            config.ColorMap.TryGetValue(result.Letters[0].ToString(), out var h) ? h : "#FFFFFF")
+                        : System.Drawing.Color.White;
+
+                    state.AddHistory(new HistoryEntry
+                    {
+                        Timestamp       = DateTime.Now,
+                        QuestionPreview = text.Length > 80 ? text[..80] + "…" : text,
+                        Answers         = result.Letters,
+                        IsDirectAnswer  = false,
+                        AnswerColor     = System.Windows.Media.Color.FromArgb(
+                            firstColor.A, firstColor.R, firstColor.G, firstColor.B),
+                    });
+                }
+                else
+                {
+                    state.LastDirectAnswer = result.DirectText;
+                    state.AddHistory(new HistoryEntry
+                    {
+                        Timestamp       = DateTime.Now,
+                        QuestionPreview = text.Length > 80 ? text[..80] + "…" : text,
+                        DirectText      = result.DirectText,
+                        IsDirectAnswer  = true,
+                        AnswerColor     = System.Windows.Media.Color.FromArgb(255, 255, 255, 255),
+                    });
+                }
+
+                state.Status = AppStatus.Answered;
             }
             else
             {
@@ -193,6 +210,7 @@ public partial class App : System.Windows.Application
         }
 
         _tray?.UpdateIconFromState();
+
 
         // Auto-reset error after 3 seconds
         if (state.Status == AppStatus.Error)

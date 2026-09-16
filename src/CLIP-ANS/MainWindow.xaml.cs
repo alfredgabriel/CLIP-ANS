@@ -30,6 +30,8 @@ public class LegendItem
 {
     public string Letter { get; set; } = string.Empty;
     public string HexColor { get; set; } = "#FFFFFF";
+    /// <summary>True when this option can be deleted (user-added extras).</summary>
+    public bool CanDelete { get; set; }
     public SolidColorBrush ColorBrush =>
         new(ColorFromHex(HexColor));
 
@@ -171,7 +173,8 @@ public partial class MainWindow : Window
         // Behaviour sliders
         MinLengthSlider.Value = _config.MinTextLength;
         DebounceSlider.Value  = _config.DebounceMs;
-        DetectionToggle.IsChecked = AppState.Instance.DetectionEnabled;
+        DetectionToggle.IsChecked  = AppState.Instance.DetectionEnabled;
+        ScreenshotToggle.IsChecked = _config.DetectScreenshots;
 
         // Legend
         BuildLegendItems();
@@ -208,11 +211,18 @@ public partial class MainWindow : Window
         SelectModelInCombo(newModel);
     }
 
+    private static readonly HashSet<string> _defaultLetters = ["A","B","C","D","E","F"];
+
     private void BuildLegendItems()
     {
         _legendItems = [];
-        foreach (var kv in _config.ColorMap)
-            _legendItems.Add(new LegendItem { Letter = kv.Key, HexColor = kv.Value });
+        foreach (var kv in _config.ColorMap.OrderBy(k => k.Key))
+            _legendItems.Add(new LegendItem
+            {
+                Letter    = kv.Key,
+                HexColor  = kv.Value,
+                CanDelete = !_defaultLetters.Contains(kv.Key),
+            });
         LegendItems.ItemsSource = _legendItems;
     }
 
@@ -440,10 +450,11 @@ public partial class MainWindow : Window
             var result = await client.AskAsync(
                 "Pregunta: ¿Cuál es la capital de Francia?\nA) Madrid\nB) París\nC) Roma\nD) Berlín");
 
-            var parsed = AnswerParser.Parse(result);
-            TestResultLabel.Text = parsed.Count > 0
-                ? $"✓ OK — Resp: {string.Join(",", parsed)}"
-                : $"✓ OK — Resp: {result.Trim()}";
+            var parsed = AnswerParser.Parse(result, _config.ColorMap.Keys);
+            var displayText = parsed.IsMultipleChoice && parsed.Letters.Count > 0
+                ? $"✓ OK — Resp: {string.Join(",", parsed.Letters)}"
+                : $"✓ OK — Resp: {(parsed.DirectText.Length > 30 ? parsed.DirectText[..30] + "…" : parsed.DirectText)}";
+            TestResultLabel.Text       = displayText;
             TestResultLabel.Foreground = new SolidColorBrush(Colors.Lime);
 
             // Auto-save working configuration immediately
@@ -515,6 +526,38 @@ public partial class MainWindow : Window
     private void DetectionToggle_Changed(object sender, RoutedEventArgs e)
     {
         AppState.Instance.DetectionEnabled = DetectionToggle.IsChecked ?? true;
+    }
+
+    private void ScreenshotToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        _config.DetectScreenshots = ScreenshotToggle.IsChecked ?? true;
+    }
+
+    // ── Event handlers — Add / Delete color option ────────────────────────────
+
+    private void AddOptionBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var next = _config.NextAvailableLetter();
+        if (next is null)
+        {
+            System.Windows.MessageBox.Show(
+                "Has llegado al límite de 26 opciones (A-Z).",
+                "CLIP-ANS", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        var color = _config.DefaultColorForNewLetter();
+        _config.ColorMap[next] = color;
+        BuildLegendItems();
+    }
+
+    private void DeleteOptionBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var btn    = (System.Windows.Controls.Button)sender;
+        var letter = btn.Tag?.ToString() ?? string.Empty;
+        if (string.IsNullOrEmpty(letter) || _defaultLetters.Contains(letter)) return;
+        _config.ColorMap.Remove(letter);
+        BuildLegendItems();
+        UpdateStatusChip();
     }
 
     // ── Event handlers — Save ─────────────────────────────────────────────────

@@ -28,11 +28,14 @@ public class AppConfig
     [JsonPropertyName("poll_interval_ms")]
     public int PollIntervalMs { get; set; } = 250;
 
+    [JsonPropertyName("detect_screenshots")]
+    public bool DetectScreenshots { get; set; } = true;
+
     // ── Startup ──────────────────────────────────────────────────────────────
     [JsonPropertyName("show_window_on_start")]
     public bool ShowWindowOnStart { get; set; } = true;
 
-    // ── Color map: letter (A-E) → hex color string ───────────────────────────
+    // ── Color map: letter (A-Z) → hex color string ───────────────────────────
     [JsonPropertyName("color_map")]
     public Dictionary<string, string> ColorMap { get; set; } = new()
     {
@@ -41,6 +44,7 @@ public class AppConfig
         ["C"] = "#4488FF",  // Blue
         ["D"] = "#FFD700",  // Yellow
         ["E"] = "#AA44FF",  // Purple
+        ["F"] = "#FF8800",  // Orange
     };
 
     // ── Multi-answer strategy ─────────────────────────────────────────────────
@@ -59,7 +63,33 @@ public class AppConfig
         ["C"] = "#4488FF",
         ["D"] = "#FFD700",
         ["E"] = "#AA44FF",
+        ["F"] = "#FF8800",
     };
+
+    // Default colors for new letters added dynamically
+    private static readonly string[] _extraColors =
+    [
+        "#FF8800", "#00CCFF", "#FF44AA", "#88FF00",
+        "#FF2244", "#00FFCC", "#FFCC00", "#AA00FF",
+        "#FF6600", "#00FF88", "#4400FF", "#FF0066",
+        "#AAAAAA", "#00AAFF", "#FFAA00", "#00FFAA",
+        "#CC44FF", "#FF44CC", "#44FFCC", "#CCFF44",
+    ];
+
+    /// <summary>Returns the next alphabetical letter not yet in ColorMap, or null if A-Z exhausted.</summary>
+    public string? NextAvailableLetter()
+    {
+        for (char c = 'A'; c <= 'Z'; c++)
+            if (!ColorMap.ContainsKey(c.ToString())) return c.ToString();
+        return null;
+    }
+
+    /// <summary>Default hex color to assign when a new letter is added.</summary>
+    public string DefaultColorForNewLetter()
+    {
+        int idx = ColorMap.Count - 1;
+        return idx >= 0 && idx < _extraColors.Length ? _extraColors[idx] : "#AAAAAA";
+    }
 
     public static Dictionary<string, string[]> ProviderModels => new()
     {

@@ -73,8 +73,20 @@ public sealed class TrayManager : IDisposable
                 break;
 
             case AppStatus.Answered:
-                icon = BuildAnswerIcon(config);
-                tip  = $"CLIP-ANS — Respuesta: {_state.LastAnswerDisplay}";
+                if (_state.IsDirectAnswer)
+                {
+                    // Open-ended answer → white icon + text in tooltip
+                    icon = IconRenderer.CreateDirectAnswerIcon();
+                    var answer = _state.LastDirectAnswer;
+                    tip = ("CLIP-ANS: " + answer).Length > 63
+                        ? ("CLIP-ANS: " + answer)[..63]
+                        : "CLIP-ANS: " + answer;
+                }
+                else
+                {
+                    icon = BuildAnswerIcon(config);
+                    tip  = $"CLIP-ANS — Respuesta: {_state.LastAnswerDisplay}";
+                }
                 break;
 
             case AppStatus.Error:

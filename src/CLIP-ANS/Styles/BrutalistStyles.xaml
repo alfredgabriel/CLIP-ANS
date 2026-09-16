@@ -163,10 +163,10 @@
 
     <!-- ── ComboBox ─────────────────────────────────────────────────── -->
     <Style x:Key="BrutalistComboBox" TargetType="ComboBox">
-        <Setter Property="Background"       Value="#000000"/>
-        <Setter Property="Foreground"       Value="#FFFFFF"/>
-        <Setter Property="BorderBrush"      Value="#FFFFFF"/>
-        <Setter Property="BorderThickness"  Value="2"/>
+        <Setter Property="Background"       Value="#EEEEEE"/>
+        <Setter Property="Foreground"       Value="#000000"/>
+        <Setter Property="BorderBrush"      Value="#555555"/>
+        <Setter Property="BorderThickness"  Value="1.5"/>
         <Setter Property="FontFamily"       Value="{StaticResource MonoFont}"/>
         <Setter Property="FontSize"         Value="12"/>
         <Setter Property="Padding"          Value="8,6"/>
@@ -174,14 +174,14 @@
         <Setter Property="ItemContainerStyle">
             <Setter.Value>
                 <Style TargetType="ComboBoxItem">
-                    <Setter Property="Background"   Value="#000000"/>
-                    <Setter Property="Foreground"   Value="#FFFFFF"/>
+                    <Setter Property="Background"   Value="#FFFFFF"/>
+                    <Setter Property="Foreground"   Value="#000000"/>
                     <Setter Property="FontFamily"   Value="{StaticResource MonoFont}"/>
                     <Setter Property="Padding"      Value="8,6"/>
                     <Style.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter Property="Background" Value="#FFFFFF"/>
-                            <Setter Property="Foreground" Value="#000000"/>
+                            <Setter Property="Background" Value="#000000"/>
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
                         </Trigger>
                     </Style.Triggers>
                 </Style>

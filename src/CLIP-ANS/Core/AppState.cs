@@ -11,8 +11,14 @@ public class HistoryEntry
 {
     public DateTime Timestamp { get; init; }
     public string QuestionPreview { get; init; } = string.Empty;
+    /// <summary>For multiple-choice answers.</summary>
     public List<char> Answers { get; init; } = [];
-    public string AnswerDisplay => string.Join(", ", Answers);
+    /// <summary>For open-ended answers.</summary>
+    public string DirectText { get; init; } = string.Empty;
+    public bool IsDirectAnswer { get; init; }
+    public string AnswerDisplay => IsDirectAnswer
+        ? (DirectText.Length > 50 ? DirectText[..50] + "…" : DirectText)
+        : string.Join(", ", Answers);
     public System.Windows.Media.Color AnswerColor { get; init; }
 }
 
@@ -96,9 +102,39 @@ public class AppState : INotifyPropertyChanged
             NotifyChanged(nameof(LastAnswerDisplay));
         }
     }
-    public string LastAnswerDisplay => _lastAnswers.Count > 0
-        ? string.Join(", ", _lastAnswers)
-        : "—";
+
+    private string _lastDirectAnswer = string.Empty;
+    public string LastDirectAnswer
+    {
+        get => _lastDirectAnswer;
+        set
+        {
+            _lastDirectAnswer = value;
+            NotifyChanged(nameof(LastDirectAnswer));
+            NotifyChanged(nameof(LastAnswerDisplay));
+        }
+    }
+
+    private bool _isDirectAnswer;
+    public bool IsDirectAnswer
+    {
+        get => _isDirectAnswer;
+        set => Set(ref _isDirectAnswer, value);
+    }
+
+    public string LastAnswerDisplay
+    {
+        get
+        {
+            if (_isDirectAnswer)
+                return _lastDirectAnswer.Length > 60
+                    ? _lastDirectAnswer[..60] + "…"
+                    : _lastDirectAnswer;
+            return _lastAnswers.Count > 0
+                ? string.Join(", ", _lastAnswers)
+                : "—";
+        }
+    }
 
     private string _lastErrorMessage = string.Empty;
     public string LastErrorMessage

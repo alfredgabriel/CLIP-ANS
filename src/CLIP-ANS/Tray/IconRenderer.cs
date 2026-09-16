@@ -128,6 +128,36 @@ public static class IconRenderer
         return BitmapToIcon(bmp);
     }
 
+    /// <summary>
+    /// Creates a solid white circle icon used for open-ended / direct text answers.
+    /// A small dark 'T' in the centre indicates a text response.
+    /// </summary>
+    public static Icon CreateDirectAnswerIcon()
+    {
+        using var bmp = new Bitmap(Size, Size, PixelFormat.Format32bppArgb);
+        using var g   = Graphics.FromImage(bmp);
+        ConfigureGraphics(g);
+
+        float margin = 3f;
+        var rect = new RectangleF(margin, margin, Size - 2 * margin, Size - 2 * margin);
+
+        // Filled white circle
+        using var whiteBrush = new SolidBrush(Color.White);
+        g.FillEllipse(whiteBrush, rect);
+
+        // Subtle dark outline
+        using var borderPen = new Pen(Color.FromArgb(80, 80, 80), 1.5f);
+        g.DrawEllipse(borderPen, rect);
+
+        // Small 'T' glyph in centre to signal text answer
+        using var font = new Font("Consolas", 9.5f, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var textBrush = new SolidBrush(Color.FromArgb(30, 30, 30));
+        var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        g.DrawString("T", font, textBrush, new RectangleF(0, 0, Size, Size), sf);
+
+        return BitmapToIcon(bmp);
+    }
+
     /// <summary>Creates an icon for the error/timeout state (vibrant red circle).</summary>
     public static Icon CreateErrorIcon()
     {

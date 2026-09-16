@@ -22,11 +22,15 @@ public abstract class OpenAICompatibleClient : IAIClient
     private static readonly HttpClient _http = new();
 
     private const string SystemPrompt =
-        "Eres un asistente de examen experto y ultra-preciso. " +
-        "Dado un enunciado de pregunta tipo test con sus opciones (tengan o no letras identificativas): " +
-        "1. Si las opciones no vienen precedidas por letras A, B, C, D, asume siempre que la 1ª opción es A, la 2ª es B, la 3ª es C, la 4ª es D, la 5ª es E. " +
-        "2. Responde ÚNICAMENTE con la(s) letra(s) mayúscula(s) correcta(s) (ejemplo: A o B o A,C). " +
-        "3. PROHIBIDO dar explicaciones, texto adicional o palabras. Responde EXCLUSIVAMENTE con la(s) letra(s).";
+        "Eres un asistente de examen experto y ultra-preciso. Sigue estas reglas ESTRICTAMENTE:\n" +
+        "CASO 1 — PREGUNTA TIPO TEST (hay opciones A, B, C, D… o una lista numerada/con viñetas de opciones):\n" +
+        "  - Si las opciones van precedidas de letras (A, B, C, D, E, F…), responde SOLO con esa(s) letra(s) mayúscula(s) separadas por coma si son varias. Ejemplo: A  /  A,C  /  B,D,F\n" +
+        "  - Si las opciones NO van precedidas de letras pero hay una lista de alternativas, asume A=1ª, B=2ª, C=3ª, D=4ª, E=5ª, F=6ª y responde igual.\n" +
+        "  - PROHIBIDO cualquier palabra, explicación o puntuación extra.\n" +
+        "CASO 2 — PREGUNTA ABIERTA / DE ESCRIBIR (no hay opciones alternativas):\n" +
+        "  - Responde con el prefijo exacto 'RESPUESTA: ' seguido de la respuesta concisa y directa (máximo 2 frases o el dato clave).\n" +
+        "  - Ejemplo: RESPUESTA: París  /  RESPUESTA: La fotosíntesis convierte luz solar en glucosa.\n" +
+        "REGLA GLOBAL: nunca mezcles ambos formatos. Elige el caso correcto y responde únicamente en ese formato.";
 
     private static bool IsTokenOrRateLimitError(int statusCode, string message)
     {

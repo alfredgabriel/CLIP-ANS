@@ -1,14 +1,17 @@
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Windows.Media.Imaging;
 using QuizHelper.Models;
 
 namespace QuizHelper.Core;
 
 /// <summary>
 /// Background clipboard watcher. Polls the clipboard every <see cref="AppConfig.PollIntervalMs"/>
-/// milliseconds and fires <see cref="NewTextDetected"/> when a new, sufficiently long
-/// text is found. Uses Windows GetClipboardSequenceNumber to reliably detect every copy event.
+/// milliseconds and fires <see cref="NewTextDetected"/> when:
+/// - A new, sufficiently long text is found (normal text copy), OR
+/// - A new image is detected and OCR extracts enough text from it (screenshot detection).
+/// Uses Windows GetClipboardSequenceNumber to reliably detect every copy event.
 /// </summary>
 public sealed class ClipboardWatcher : IDisposable
 {
@@ -63,34 +66,70 @@ public sealed class ClipboardWatcher : IDisposable
         if (currentSeq == _lastSequenceNumber && currentSeq != 0)
             return;
 
-        string text = string.Empty;
+        _lastSequenceNumber = currentSeq;
+
+        bool hasText  = false;
+        bool hasImage = false;
+        string text   = string.Empty;
+        BitmapSource? bitmapSource = null;
+
         try
         {
-            // Clipboard must be read on an STA thread
             System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
             {
-                if (System.Windows.Clipboard.ContainsText())
+                hasText  = System.Windows.Clipboard.ContainsText();
+                hasImage = System.Windows.Clipboard.ContainsImage();
+
+                if (hasText)
                     text = System.Windows.Clipboard.GetText();
+
+                if (hasImage && !hasText)
+                    bitmapSource = System.Windows.Clipboard.GetImage();
             });
         }
         catch { return; }
 
-        if (string.IsNullOrWhiteSpace(text)) return;
-        if (text.Length < _state.Config.MinTextLength) return;
+        var config = _state.Config;
 
-        _lastSequenceNumber = currentSeq;
-
-        // Check content hash to avoid duplicate firing unless previous was error or idle
-        var hash = ComputeHash(text);
-        if (hash == _lastHash && _state.Status == AppStatus.Answered) return;
-        _lastHash = hash;
-
-        // Debounce before firing
-        _debounce.Debounce(_state.Config.DebounceMs, async ct =>
+        // ── Text path ────────────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(text) && text.Length >= config.MinTextLength)
         {
-            if (NewTextDetected is not null)
-                await NewTextDetected.Invoke(text, ct);
-        });
+            var hash = ComputeHash(text);
+            if (hash == _lastHash && _state.Status == AppStatus.Answered) return;
+            _lastHash = hash;
+
+            _debounce.Debounce(config.DebounceMs, async ct =>
+            {
+                if (NewTextDetected is not null)
+                    await NewTextDetected.Invoke(text, ct);
+            });
+            return;
+        }
+
+        // ── Image/screenshot path ────────────────────────────────────────────
+        if (config.DetectScreenshots && bitmapSource != null)
+        {
+            var bmpHash = OcrHelper.HashBitmap(bitmapSource);
+            if (bmpHash == _lastHash) return;
+            _lastHash = bmpHash;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var ocrText = await OcrHelper.RecognizeTextAsync(bitmapSource);
+                    if (string.IsNullOrWhiteSpace(ocrText) || ocrText.Length < config.MinTextLength)
+                        return;
+
+                    _debounce.Debounce(config.DebounceMs, async ct =>
+                    {
+                        if (NewTextDetected is not null)
+                            await NewTextDetected.Invoke(ocrText, ct);
+                    });
+                }
+                catch { }
+            });
+        }
     }
 
     private static string ComputeHash(string text)
