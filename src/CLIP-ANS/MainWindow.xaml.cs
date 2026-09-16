@@ -548,6 +548,7 @@ public partial class MainWindow : Window
         var color = _config.DefaultColorForNewLetter();
         _config.ColorMap[next] = color;
         BuildLegendItems();
+        Dispatcher.InvokeAsync(() => LegendScrollViewer.ScrollToEnd(), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private void DeleteOptionBtn_Click(object sender, RoutedEventArgs e)

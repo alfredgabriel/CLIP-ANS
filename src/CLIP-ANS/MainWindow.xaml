@@ -316,65 +316,71 @@
                                        FontSize="10" Foreground="#777777"/>
                         </Grid>
 
-                        <!-- Legend rows (compact, responsive) -->
-                        <ItemsControl x:Name="LegendItems" HorizontalAlignment="Stretch" Margin="0,2,0,4">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,2" HorizontalAlignment="Stretch">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="26"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="60"/>
-                                            <ColumnDefinition Width="22"/>
-                                        </Grid.ColumnDefinitions>
-                                        <!-- Letter label -->
-                                        <TextBlock Grid.Column="0"
-                                                   Text="{Binding Letter}"
-                                                   FontWeight="Bold"
-                                                   FontSize="13"
-                                                   Foreground="#FFFFFF"
-                                                   FontFamily="{StaticResource MonoFont}"
-                                                   VerticalAlignment="Center"/>
-                                        <!-- Color chip (clickable, fills width) -->
-                                        <Button Grid.Column="1"
-                                                Background="{Binding ColorBrush}"
-                                                BorderBrush="#444444"
-                                                BorderThickness="1"
-                                                Height="22"
-                                                HorizontalAlignment="Stretch"
-                                                Cursor="Hand"
-                                                Click="ColorChip_Click"
-                                                Tag="{Binding Letter}"
-                                                ToolTip="Cambiar color"/>
-                                        <!-- Hex label -->
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{Binding HexColor}"
-                                                   Style="{StaticResource ValueText}"
-                                                   FontSize="9"
-                                                   Foreground="#888888"
-                                                   VerticalAlignment="Center"
-                                                   HorizontalAlignment="Right"
-                                                   Margin="4,0,0,0"/>
-                                        <!-- Delete button -->
-                                        <Button Grid.Column="3"
-                                                Content="×"
-                                                Width="20" Height="20"
-                                                Margin="2,0,0,0"
-                                                Padding="0"
-                                                FontSize="13"
-                                                FontWeight="Bold"
-                                                Foreground="#FF4444"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                Cursor="Hand"
-                                                Click="DeleteOptionBtn_Click"
-                                                Tag="{Binding Letter}"
-                                                ToolTip="Eliminar opción"
-                                                Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <!-- Legend rows (scrollable when options are added) -->
+                        <ScrollViewer x:Name="LegendScrollViewer"
+                                      MaxHeight="165"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Margin="0,2,0,4">
+                            <ItemsControl x:Name="LegendItems" HorizontalAlignment="Stretch" Margin="0,0,4,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2" HorizontalAlignment="Stretch">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="26"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="22"/>
+                                            </Grid.ColumnDefinitions>
+                                            <!-- Letter label -->
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Letter}"
+                                                       FontWeight="Bold"
+                                                       FontSize="13"
+                                                       Foreground="#FFFFFF"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       VerticalAlignment="Center"/>
+                                            <!-- Color chip (clickable, fills width) -->
+                                            <Button Grid.Column="1"
+                                                    Background="{Binding ColorBrush}"
+                                                    BorderBrush="#444444"
+                                                    BorderThickness="1"
+                                                    Height="22"
+                                                    HorizontalAlignment="Stretch"
+                                                    Cursor="Hand"
+                                                    Click="ColorChip_Click"
+                                                    Tag="{Binding Letter}"
+                                                    ToolTip="Cambiar color"/>
+                                            <!-- Hex label -->
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding HexColor}"
+                                                       Style="{StaticResource ValueText}"
+                                                       FontSize="9"
+                                                       Foreground="#888888"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Right"
+                                                       Margin="4,0,0,0"/>
+                                            <!-- Delete button -->
+                                            <Button Grid.Column="3"
+                                                    Content="×"
+                                                    Width="20" Height="20"
+                                                    Margin="2,0,0,0"
+                                                    Padding="0"
+                                                    FontSize="13"
+                                                    FontWeight="Bold"
+                                                    Foreground="#FF4444"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Cursor="Hand"
+                                                    Click="DeleteOptionBtn_Click"
+                                                    Tag="{Binding Letter}"
+                                                    ToolTip="Eliminar opción"
+                                                    Visibility="{Binding CanDelete, Converter={StaticResource BoolToVis}}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
 
                         <!-- Bottom action buttons -->
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
