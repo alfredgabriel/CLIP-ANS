@@ -37,7 +37,7 @@ public abstract class OpenAICompatibleClient : IAIClient
                 new { role = "system",  content = SystemPrompt },
                 new { role = "user",    content = questionText }
             },
-            max_tokens  = 20,
+            max_tokens  = 150,
             temperature = 0.0
         };
 
@@ -71,11 +71,13 @@ public abstract class OpenAICompatibleClient : IAIClient
             }
 
             var doc = JsonDocument.Parse(body);
-            return doc.RootElement
-                      .GetProperty("choices")[0]
-                      .GetProperty("message")
-                      .GetProperty("content")
-                      .GetString() ?? string.Empty;
+            var msg = doc.RootElement.GetProperty("choices")[0].GetProperty("message");
+            string content = msg.TryGetProperty("content", out var cProp) ? cProp.GetString() ?? string.Empty : string.Empty;
+            if (string.IsNullOrWhiteSpace(content) && msg.TryGetProperty("reasoning", out var rProp))
+            {
+                content = rProp.GetString() ?? string.Empty;
+            }
+            return content;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -94,7 +96,7 @@ public sealed class GroqClient : OpenAICompatibleClient
     protected override string Model { get; }
     protected override int TimeoutSeconds { get; }
 
-    public GroqClient(string apiKey, string model = "llama-3.3-70b-versatile", int timeoutSeconds = 8)
+    public GroqClient(string apiKey, string model = "qwen/qwen3.8-27b", int timeoutSeconds = 8)
     {
         ApiKey         = apiKey;
         Model          = model;
