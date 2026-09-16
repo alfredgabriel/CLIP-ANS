@@ -81,8 +81,23 @@
                     <!-- Model selector -->
                     <TextBlock Text="MODELO" Style="{StaticResource SectionLabel}"
                                Margin="0,10,0,4"/>
-                    <ComboBox x:Name="ModelCombo"
-                              Style="{StaticResource BrutalistComboBox}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="ModelCombo"
+                                  Grid.Column="0"
+                                  Style="{StaticResource BrutalistComboBox}"/>
+                        <Button Grid.Column="1"
+                                x:Name="RefreshModelsBtn"
+                                Content="↺"
+                                Style="{StaticResource BrutalistButton}"
+                                Padding="10,6"
+                                Margin="6,0,0,0"
+                                ToolTip="Cargar modelos disponibles en tu cuenta"
+                                Click="RefreshModelsBtn_Click"/>
+                    </Grid>
 
                     <!-- API Key -->
                     <TextBlock Text="API KEY" Style="{StaticResource SectionLabel}"

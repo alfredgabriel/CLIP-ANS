@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Net.Http;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
@@ -212,6 +214,92 @@ public partial class MainWindow : Window
 
     // ── Event handlers — Test connection ─────────────────────────────────────
 
+    private async void RefreshModelsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var key = (_showingKey ? ApiKeyPlain.Text : ApiKeyBox.Password).Trim();
+        if (string.IsNullOrWhiteSpace(key) || key.Length < 25 || key.Contains("..."))
+        {
+            TestResultLabel.Text       = "✗ PEGA TU API KEY PRIMERO";
+            TestResultLabel.Foreground = new SolidColorBrush(Colors.Orange);
+            return;
+        }
+
+        RefreshModelsBtn.IsEnabled = false;
+        TestResultLabel.Text       = "CONSULTANDO MODELOS...";
+        TestResultLabel.Foreground = System.Windows.Media.Brushes.Cyan;
+
+        try
+        {
+            var models = await FetchAvailableModelsAsync(_config.Provider, key);
+            if (models.Count > 0)
+            {
+                ModelCombo.Items.Clear();
+                foreach (var m in models)
+                    ModelCombo.Items.Add(new ComboBoxItem { Content = m, Tag = m });
+                ModelCombo.SelectedIndex = 0;
+
+                TestResultLabel.Text       = $"✓ {models.Count} MODELOS CARGADOS";
+                TestResultLabel.Foreground = new SolidColorBrush(Colors.Lime);
+            }
+            else
+            {
+                TestResultLabel.Text       = "✗ NO SE PUDIERON CARGAR";
+                TestResultLabel.Foreground = System.Windows.Media.Brushes.White;
+            }
+        }
+        catch (Exception ex)
+        {
+            TestResultLabel.Text       = $"✗ ERROR: {ex.Message[..Math.Min(35, ex.Message.Length)]}";
+            TestResultLabel.Foreground = System.Windows.Media.Brushes.White;
+        }
+        finally
+        {
+            RefreshModelsBtn.IsEnabled = true;
+        }
+    }
+
+    private async Task<List<string>> FetchAvailableModelsAsync(string provider, string key)
+    {
+        var list = new List<string>();
+        try
+        {
+            string url = provider.ToLowerInvariant() == "openai"
+                ? "https://api.openai.com/v1/models"
+                : "https://api.groq.com/openai/v1/models";
+
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+            using var req  = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", key);
+
+            var resp = await http.SendAsync(req);
+            if (!resp.IsSuccessStatusCode) return list;
+
+            var body = await resp.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("data", out var data))
+            {
+                foreach (var el in data.EnumerateArray())
+                {
+                    if (el.TryGetProperty("id", out var idProp))
+                    {
+                        var id = idProp.GetString();
+                        if (!string.IsNullOrEmpty(id) &&
+                            !id.Contains("whisper") &&
+                            !id.Contains("tts") &&
+                            !id.Contains("guard") &&
+                            !id.Contains("embed") &&
+                            !id.Contains("bge"))
+                        {
+                            list.Add(id);
+                        }
+                    }
+                }
+            }
+        }
+        catch { /* ignore background network issues */ }
+        return list;
+    }
+
     private async void TestConnectionBtn_Click(object sender, RoutedEventArgs e)
     {
         var key = (_showingKey ? ApiKeyPlain.Text : ApiKeyBox.Password).Trim();
@@ -269,13 +357,37 @@ public partial class MainWindow : Window
         {
             var msg = ex.Message;
             if (msg.Contains("401") || msg.Contains("Unauthorized") || msg.Contains("Invalid API Key"))
-                TestResultLabel.Text = "✗ API KEY INVÁLIDA";
-            else if (msg.Contains("decommissioned") || msg.Contains("not found"))
-                TestResultLabel.Text = "✗ MODELO OBSOLETO";
-            else
-                TestResultLabel.Text = $"✗ ERROR: {msg[..Math.Min(35, msg.Length)]}";
+            {
+                TestResultLabel.Text       = "✗ API KEY INVÁLIDA";
+                TestResultLabel.Foreground = System.Windows.Media.Brushes.White;
+            }
+            else if (msg.Contains("decommissioned") || msg.Contains("not found") || msg.Contains("does not exist") || msg.Contains("model"))
+            {
+                TestResultLabel.Text       = "BUSCANDO MODELOS ACTIVOS...";
+                TestResultLabel.Foreground = System.Windows.Media.Brushes.Cyan;
 
-            TestResultLabel.Foreground = System.Windows.Media.Brushes.White;
+                var liveModels = await FetchAvailableModelsAsync(provider, key);
+                if (liveModels.Count > 0)
+                {
+                    ModelCombo.Items.Clear();
+                    foreach (var m in liveModels)
+                        ModelCombo.Items.Add(new ComboBoxItem { Content = m, Tag = m });
+                    ModelCombo.SelectedIndex = 0;
+                    var chosen = (ModelCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? liveModels[0];
+                    TestResultLabel.Text       = $"↻ ASIGNADO '{chosen}'. VUELVE A PROBAR";
+                    TestResultLabel.Foreground = new SolidColorBrush(Colors.Yellow);
+                }
+                else
+                {
+                    TestResultLabel.Text       = "✗ MODELO NO DISPONIBLE";
+                    TestResultLabel.Foreground = System.Windows.Media.Brushes.White;
+                }
+            }
+            else
+            {
+                TestResultLabel.Text       = $"✗ ERROR: {msg[..Math.Min(35, msg.Length)]}";
+                TestResultLabel.Foreground = System.Windows.Media.Brushes.White;
+            }
         }
     }
 
