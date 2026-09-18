@@ -48,6 +48,12 @@ public class AppConfig
     [JsonPropertyName("overlay_opacity")]
     public double OverlayOpacity { get; set; } = 0.90;
 
+    [JsonPropertyName("overlay_fixed_color")]
+    public bool OverlayFixedColor { get; set; } = false;
+
+    [JsonPropertyName("overlay_fixed_color_hex")]
+    public string OverlayFixedColorHex { get; set; } = "#1E88E5";
+
     // ── Color map: letter (A-Z) → hex color string ───────────────────────────
     [JsonPropertyName("color_map")]
     public Dictionary<string, string> ColorMap { get; set; } = new()

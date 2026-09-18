@@ -277,6 +277,15 @@
                                        Text="90%"/>
                         </Grid>
 
+                        <!-- Fixed blue color toggle for overlay -->
+                        <CheckBox x:Name="OverlayFixedColorToggle"
+                                  Style="{StaticResource BrutalistCheckBox}"
+                                  Content="OVERLAY COLOR FIJO (AZUL)"
+                                  Margin="0,0,0,6"
+                                  ToolTip="Mantiene el fondo del overlay siempre azul y solo cambia la letra de la respuesta"
+                                  Checked="OverlayFixedColorToggle_Changed"
+                                  Unchecked="OverlayFixedColorToggle_Changed"/>
+
                         <!-- Min text length -->
                         <TextBlock Text="LONGITUD MÍNIMA DE TEXTO" Style="{StaticResource SectionLabel}" Margin="0,2,0,1"/>
                         <Grid Margin="0,0,0,6" HorizontalAlignment="Stretch">

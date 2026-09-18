@@ -15,11 +15,13 @@ namespace QuizHelper.Overlay;
 
 /// <summary>
 /// Always-on-top transparent overlay that shows the answer as a compact circle badge
-/// with the letter (A, B, C, D...) and its configured color.
-/// Can be dragged anywhere on screen and supports opacity adjustment.
+/// with the letter (A, B, C, D...) and its configured color (or fixed blue).
+/// Borderless design, draggable, right-click to copy or close, supports opacity adjustment.
 /// </summary>
 public partial class OverlayWindow : Window
 {
+    public event Action<bool>? VisibilityChanged;
+
     private bool _visible;
     private double _targetOpacity = 0.90;
 
@@ -68,6 +70,7 @@ public partial class OverlayWindow : Window
     public bool Toggle()
     {
         SetVisible(!_visible);
+        VisibilityChanged?.Invoke(_visible);
         return _visible;
     }
 
@@ -82,7 +85,7 @@ public partial class OverlayWindow : Window
         }
     }
 
-    /// <summary>Updates opacity and color configurations from updated AppConfig.</summary>
+    /// <summary>Updates opacity, color mode, and displays from updated AppConfig.</summary>
     public void UpdateFromConfig(AppConfig config)
     {
         SetOpacity(config.OverlayOpacity);
@@ -115,29 +118,29 @@ public partial class OverlayWindow : Window
         switch (state.Status)
         {
             case AppStatus.Querying:
-                ShowWaiting("···", WpfColor.FromRgb(0, 230, 255), new SolidBrush(WpfColor.FromRgb(0, 230, 255)));
+                ShowWaiting("···", new SolidBrush(WpfColor.FromRgb(0, 230, 255)));
                 break;
 
             case AppStatus.Answered:
                 if (state.IsDirectAnswer)
                     ShowDirectText(state.LastDirectAnswer);
                 else
-                    ShowLetters(state.LastAnswers, config.ColorMap);
+                    ShowLetters(state.LastAnswers, config);
                 break;
 
             case AppStatus.Error:
-                ShowWaiting("!", WpfColor.FromRgb(255, 68, 68), new SolidBrush(WpfColor.FromRgb(255, 68, 68)));
+                ShowWaiting("!", new SolidBrush(WpfColor.FromRgb(255, 68, 68)));
                 break;
 
             default:
-                ShowWaiting("—", WpfColor.FromArgb(100, 255, 255, 255), new SolidBrush(WpfColor.FromRgb(170, 170, 170)));
+                ShowWaiting("—", new SolidBrush(WpfColor.FromRgb(170, 170, 170)));
                 break;
         }
     }
 
     // ── Display modes ──────────────────────────────────────────────────────────
 
-    private void ShowLetters(IReadOnlyList<char> letters, Dictionary<string, string> colorMap)
+    private void ShowLetters(IReadOnlyList<char> letters, AppConfig config)
     {
         LettersPanel.Visibility = Visibility.Visible;
         TextPanel.Visibility    = Visibility.Collapsed;
@@ -151,21 +154,35 @@ public partial class OverlayWindow : Window
             return;
         }
 
+        bool fixedColor = config.OverlayFixedColor;
+        WpfColor fixedBlue = ParseHexToWpf(config.OverlayFixedColorHex);
+
         foreach (var letter in letters)
         {
-            var key   = letter.ToString();
-            var hex   = colorMap.TryGetValue(key, out var h) ? h : "#FFFFFF";
-            WpfColor color = ParseHexToWpf(hex);
+            var key = letter.ToString();
+            WpfColor bgColor;
+            WpfBrush textBrush;
+
+            if (fixedColor)
+            {
+                bgColor   = fixedBlue;
+                textBrush = WpfBrushes.White;
+            }
+            else
+            {
+                var hex = config.ColorMap.TryGetValue(key, out var h) ? h : "#1E88E5";
+                bgColor   = ParseHexToWpf(hex);
+                textBrush = GetContrastingBrush(bgColor);
+            }
 
             var badge = new Border
             {
                 Width           = 38,
                 Height          = 38,
                 CornerRadius    = new CornerRadius(19),
-                BorderBrush     = WpfBrushes.White,
-                BorderThickness = new Thickness(2),
+                BorderThickness = new Thickness(0), // No white border
                 Margin          = new Thickness(2, 0, 2, 0),
-                Background      = new SolidBrush(color),
+                Background      = new SolidBrush(bgColor),
                 Effect          = new DropShadowEffect
                 {
                     BlurRadius  = 5,
@@ -181,7 +198,7 @@ public partial class OverlayWindow : Window
                 FontFamily          = new WpfFontFamily("Segoe UI, Consolas, Arial"),
                 FontSize            = 19,
                 FontWeight          = FontWeights.Bold,
-                Foreground          = GetContrastingBrush(color),
+                Foreground          = textBrush,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 VerticalAlignment   = VerticalAlignment.Center,
                 TextAlignment       = TextAlignment.Center,
@@ -200,18 +217,13 @@ public partial class OverlayWindow : Window
         DirectAnswerText.Text   = string.IsNullOrWhiteSpace(text) ? "—" : text;
     }
 
-    private void ShowWaiting(string symbol, WpfColor? borderColor = null, WpfBrush? textBrush = null)
+    private void ShowWaiting(string symbol, WpfBrush? textBrush = null)
     {
         LettersPanel.Visibility = Visibility.Collapsed;
         TextPanel.Visibility    = Visibility.Collapsed;
         WaitingBadge.Visibility = Visibility.Visible;
         WaitingText.Text        = symbol;
-
-        WaitingBadge.BorderBrush = borderColor.HasValue
-            ? new SolidBrush(borderColor.Value)
-            : new SolidBrush(WpfColor.FromArgb(100, 255, 255, 255));
-
-        WaitingText.Foreground = textBrush ?? WpfBrushes.White;
+        WaitingText.Foreground  = textBrush ?? WpfBrushes.White;
     }
 
     // ── Animations ─────────────────────────────────────────────────────────────
@@ -234,7 +246,7 @@ public partial class OverlayWindow : Window
         BeginAnimation(OpacityProperty, anim);
     }
 
-    // ── Dragging ───────────────────────────────────────────────────────────────
+    // ── Dragging & Context Menu ────────────────────────────────────────────────
 
     private void RootContainer_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
@@ -246,6 +258,52 @@ public partial class OverlayWindow : Window
             }
             catch { }
         }
+    }
+
+    private void RootContainer_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        var state = AppState.Instance;
+        if (state.IsDirectAnswer && !string.IsNullOrWhiteSpace(state.LastDirectAnswer))
+        {
+            CopyAnswerMenuItem.IsEnabled = true;
+            string preview = state.LastDirectAnswer.Length > 18
+                ? state.LastDirectAnswer[..18] + "…"
+                : state.LastDirectAnswer;
+            CopyAnswerMenuItem.Header = $"📋 Copiar: \"{preview}\"";
+        }
+        else if (!state.IsDirectAnswer && state.LastAnswers.Count > 0)
+        {
+            CopyAnswerMenuItem.IsEnabled = true;
+            CopyAnswerMenuItem.Header = $"📋 Copiar: {string.Join(", ", state.LastAnswers)}";
+        }
+        else
+        {
+            CopyAnswerMenuItem.IsEnabled = false;
+            CopyAnswerMenuItem.Header = "📋 Copiar (sin respuesta)";
+        }
+    }
+
+    private void CopyAnswerMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var state = AppState.Instance;
+        string text = state.IsDirectAnswer
+            ? state.LastDirectAnswer
+            : string.Join(", ", state.LastAnswers);
+
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+            }
+            catch { }
+        }
+    }
+
+    private void CloseOverlayMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        SetVisible(false);
+        VisibilityChanged?.Invoke(false);
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
@@ -273,12 +331,12 @@ public partial class OverlayWindow : Window
             {
                 byte a = Convert.ToByte(hex[..2],  16);
                 byte r = Convert.ToByte(hex[2..4], 16);
-                byte g = Convert.ToByte(hex[4..6], 16);
-                byte b = Convert.ToByte(hex[6..8], 16);
+                byte g = Convert.ToByte(hex[2..4], 16);
+                byte b = Convert.ToByte(hex[4..6], 16);
                 return WpfColor.FromArgb(a, r, g, b);
             }
         }
         catch { }
-        return WpfColors.White;
+        return WpfColor.FromRgb(30, 136, 229); // Default blue
     }
 }

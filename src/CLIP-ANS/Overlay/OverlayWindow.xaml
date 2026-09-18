@@ -13,13 +13,48 @@
         Left="20" Top="20"
         Opacity="0">
 
+    <Window.Resources>
+        <Style TargetType="ContextMenu">
+            <Setter Property="Background" Value="#181818"/>
+            <Setter Property="BorderBrush" Value="#333333"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="FontFamily" Value="Consolas, Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style TargetType="MenuItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="Padding" Value="8,5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style TargetType="Separator">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Margin" Value="2,3"/>
+        </Style>
+    </Window.Resources>
+
     <Grid x:Name="RootContainer"
           Margin="6"
           MouseLeftButtonDown="RootContainer_MouseLeftButtonDown"
+          ContextMenuOpening="RootContainer_ContextMenuOpening"
           Cursor="SizeAll"
-          ToolTip="CLIP-ANS Overlay (Arrastra para mover • Ctrl+Shift+Space para alternar)">
+          ToolTip="CLIP-ANS Overlay (Arrastra para mover • Clic derecho: menú • Ctrl+Shift+Espacio: ocultar)">
 
-        <!-- Multiple-choice letters panel (compact circle badges) -->
+        <Grid.ContextMenu>
+            <ContextMenu x:Name="OverlayContextMenu">
+                <MenuItem x:Name="CopyAnswerMenuItem"
+                          Header="📋 Copiar respuesta"
+                          Click="CopyAnswerMenuItem_Click"/>
+                <Separator/>
+                <MenuItem x:Name="CloseOverlayMenuItem"
+                          Header="✕ Cerrar overlay"
+                          Foreground="#FF6666"
+                          Click="CloseOverlayMenuItem_Click"/>
+            </ContextMenu>
+        </Grid.ContextMenu>
+
+        <!-- Multiple-choice letters panel (compact borderless circle badges) -->
         <StackPanel x:Name="LettersPanel"
                     Orientation="Horizontal"
                     HorizontalAlignment="Center"
@@ -29,8 +64,7 @@
         <!-- Direct / open-ended text badge (compact rounded pill) -->
         <Border x:Name="TextPanel"
                 Background="#EE141414"
-                BorderBrush="#00E6FF"
-                BorderThickness="1.5"
+                BorderThickness="0"
                 CornerRadius="19"
                 Height="38"
                 Padding="12,0"
@@ -47,13 +81,12 @@
                        TextAlignment="Center"/>
         </Border>
 
-        <!-- Waiting / Querying / Idle badge (small circle) -->
+        <!-- Waiting / Querying / Idle badge (small borderless circle) -->
         <Border x:Name="WaitingBadge"
                 Width="38" Height="38"
                 CornerRadius="19"
                 Background="#EE141414"
-                BorderBrush="#55FFFFFF"
-                BorderThickness="1.5"
+                BorderThickness="0"
                 Visibility="Collapsed">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.5" Color="#000000"/>

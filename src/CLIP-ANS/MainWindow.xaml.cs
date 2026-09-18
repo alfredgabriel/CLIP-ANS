@@ -186,6 +186,7 @@ public partial class MainWindow : Window
         int opacityPct = Math.Clamp((int)Math.Round(_config.OverlayOpacity * 100), 10, 100);
         OverlayOpacitySlider.Value = opacityPct;
         OverlayOpacityLabel.Text   = $"{opacityPct}%";
+        OverlayFixedColorToggle.IsChecked = _config.OverlayFixedColor;
 
         // Legend
         BuildLegendItems();
@@ -585,6 +586,7 @@ public partial class MainWindow : Window
         int opacityPct = Math.Clamp((int)Math.Round(config.OverlayOpacity * 100), 10, 100);
         OverlayOpacitySlider.Value = opacityPct;
         OverlayOpacityLabel.Text   = $"{opacityPct}%";
+        OverlayFixedColorToggle.IsChecked = config.OverlayFixedColor;
 
         UpdateStatusChip();
     }
@@ -615,6 +617,14 @@ public partial class MainWindow : Window
             OverlayOpacityLabel.Text = $"{percent}%";
         OverlayOpacityChanged?.Invoke(_config.OverlayOpacity);
         _configService.Save(_config);
+    }
+
+    private void OverlayFixedColorToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_initialized || _config == null) return;
+        _config.OverlayFixedColor = OverlayFixedColorToggle.IsChecked ?? false;
+        _configService.Save(_config);
+        ConfigChanged?.Invoke(_config);
     }
 
     // ── Event handlers — Add / Delete color option ────────────────────────────

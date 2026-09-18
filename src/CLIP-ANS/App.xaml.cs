@@ -23,8 +23,11 @@ public partial class App : System.Windows.Application
     [DllImport("user32.dll")]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-    private const int    HotkeyId      = 9001;
-    private const uint   MOD_CTRL_SHIFT = 0x0003; // MOD_CONTROL | MOD_SHIFT
+    private const int    HotkeyId       = 9001;
+    private const uint   MOD_CONTROL    = 0x0002;
+    private const uint   MOD_SHIFT      = 0x0004;
+    private const uint   MOD_NOREPEAT   = 0x4000;
+    private const uint   MOD_CTRL_SHIFT = MOD_CONTROL | MOD_SHIFT; // 0x0006
     private const uint   VK_SPACE       = 0x20;
     private const int    WM_HOTKEY      = 0x0312;
 
@@ -83,6 +86,15 @@ public partial class App : System.Windows.Application
 
             // 4. Create overlay window (hidden until user enables it)
             _overlay = new OverlayWindow();
+            _overlay.VisibilityChanged += (visible) =>
+            {
+                if (AppState.Instance.Config is { } cfg)
+                {
+                    cfg.ShowOverlay = visible;
+                    _configService.Save(cfg);
+                    _mainWindow?.SyncTogglesFromConfig(cfg);
+                }
+            };
             _tray.OverlayToggled += OnTrayOverlayToggled;
             if (config.ShowOverlay)
                 _overlay.SetVisible(true);
@@ -171,7 +183,10 @@ public partial class App : System.Windows.Application
         helper.Show();
         _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(helper).Handle);
         _hwndSource?.AddHook(WndProc);
-        RegisterHotKey(_hwndSource!.Handle, HotkeyId, MOD_CTRL_SHIFT, VK_SPACE);
+        if (!RegisterHotKey(_hwndSource!.Handle, HotkeyId, MOD_CTRL_SHIFT | MOD_NOREPEAT, VK_SPACE))
+        {
+            RegisterHotKey(_hwndSource!.Handle, HotkeyId, MOD_CTRL_SHIFT, VK_SPACE);
+        }
     }
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -183,6 +198,7 @@ public partial class App : System.Windows.Application
             {
                 cfg.ShowOverlay = nowVisible;
                 _configService.Save(cfg);
+                _mainWindow?.SyncTogglesFromConfig(cfg);
             }
             handled = true;
         }
