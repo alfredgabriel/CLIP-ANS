@@ -54,51 +54,24 @@
             </ContextMenu>
         </Grid.ContextMenu>
 
-        <!-- Multiple-choice letters panel (compact borderless circle badges) -->
-        <StackPanel x:Name="LettersPanel"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Visibility="Visible"/>
-
-        <!-- Direct / open-ended text badge (compact rounded pill) -->
-        <Border x:Name="TextPanel"
-                Background="#EE141414"
-                BorderThickness="0"
-                CornerRadius="19"
-                Height="38"
-                Padding="12,0"
-                Visibility="Collapsed">
-            <Border.Effect>
-                <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.5" Color="#000000"/>
-            </Border.Effect>
-            <TextBlock x:Name="DirectAnswerText"
-                       FontFamily="Consolas, Segoe UI, Courier New"
-                       FontSize="13"
-                       FontWeight="Bold"
-                       Foreground="#FFFFFF"
-                       VerticalAlignment="Center"
-                       TextAlignment="Center"/>
-        </Border>
-
-        <!-- Waiting / Querying / Idle badge (small borderless circle) -->
-        <Border x:Name="WaitingBadge"
+        <!-- Single round badge: ALWAYS circular (38x38), never changes shape -->
+        <Border x:Name="CircleBadge"
                 Width="38" Height="38"
                 CornerRadius="19"
                 Background="#EE141414"
-                BorderThickness="0"
-                Visibility="Collapsed">
+                BorderThickness="0">
             <Border.Effect>
-                <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.5" Color="#000000"/>
+                <DropShadowEffect BlurRadius="5" ShadowDepth="1" Opacity="0.45" Color="#000000"/>
             </Border.Effect>
-            <TextBlock x:Name="WaitingText"
+            <TextBlock x:Name="BadgeText"
                        Text="···"
-                       FontFamily="Consolas, Segoe UI, Courier New"
-                       FontSize="16"
+                       FontFamily="Segoe UI, Consolas, Arial"
+                       FontSize="18"
                        FontWeight="Bold"
-                       Foreground="#CCCCCC"
+                       Foreground="#FFFFFF"
                        HorizontalAlignment="Center"
-                       VerticalAlignment="Center"/>
+                       VerticalAlignment="Center"
+                       TextAlignment="Center"/>
         </Border>
     </Grid>
 </Window>

@@ -2,21 +2,22 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
-using System.Windows.Media.Effects;
 using QuizHelper.Models;
 using WpfBrushes    = System.Windows.Media.Brushes;
 using WpfBrush      = System.Windows.Media.Brush;
 using WpfColor      = System.Windows.Media.Color;
 using WpfColors     = System.Windows.Media.Colors;
-using WpfFontFamily = System.Windows.Media.FontFamily;
 using SolidBrush    = System.Windows.Media.SolidColorBrush;
 
 namespace QuizHelper.Overlay;
 
 /// <summary>
-/// Always-on-top transparent overlay that shows the answer as a compact circle badge
-/// with the letter (A, B, C, D...) and its configured color (or fixed blue).
-/// Borderless design, draggable, right-click to copy or close, supports opacity adjustment.
+/// Always-on-top transparent overlay that shows the answer inside a single, invariant
+/// 38x38 circle badge. Never changes shape.
+/// - Single letters: large bold font.
+/// - Multiple letters: displayed together (e.g. "ABD") with scaled-down font.
+/// - Direct text answers: shows "T" and allows copying full text on right-click.
+/// - Fixed color mode: solid blue background.
 /// </summary>
 public partial class OverlayWindow : Window
 {
@@ -118,112 +119,93 @@ public partial class OverlayWindow : Window
         switch (state.Status)
         {
             case AppStatus.Querying:
-                ShowWaiting("···", new SolidBrush(WpfColor.FromRgb(0, 230, 255)));
+                SetBadge("···", 16, WpfColor.FromRgb(24, 24, 24), WpfBrushes.Cyan,
+                    "CLIP-ANS: Consultando IA...\n(Arrastrar para mover • Ctrl+Shift+Espacio)");
                 break;
 
             case AppStatus.Answered:
                 if (state.IsDirectAnswer)
-                    ShowDirectText(state.LastDirectAnswer);
+                {
+                    ShowDirectAnswer(state.LastDirectAnswer, config);
+                }
                 else
-                    ShowLetters(state.LastAnswers, config);
+                {
+                    ShowMultipleChoice(state.LastAnswers, config);
+                }
                 break;
 
             case AppStatus.Error:
-                ShowWaiting("!", new SolidBrush(WpfColor.FromRgb(255, 68, 68)));
+                SetBadge("!", 19, WpfColor.FromRgb(180, 20, 20), WpfBrushes.White,
+                    $"CLIP-ANS Error: {state.LastErrorMessage}\n(Clic derecho para opciones)");
                 break;
 
             default:
-                ShowWaiting("—", new SolidBrush(WpfColor.FromRgb(170, 170, 170)));
+                SetBadge("—", 19, WpfColor.FromRgb(24, 24, 24), new SolidBrush(WpfColor.FromRgb(160, 160, 160)),
+                    "CLIP-ANS: Esperando pregunta\n(Arrastrar para mover • Clic derecho: menú)");
                 break;
         }
     }
 
     // ── Display modes ──────────────────────────────────────────────────────────
 
-    private void ShowLetters(IReadOnlyList<char> letters, AppConfig config)
+    private void ShowDirectAnswer(string text, AppConfig config)
     {
-        LettersPanel.Visibility = Visibility.Visible;
-        TextPanel.Visibility    = Visibility.Collapsed;
-        WaitingBadge.Visibility = Visibility.Collapsed;
+        // Remains circular, shows 'T' (for text answer), with full text in tooltip and right-click copy
+        WpfColor blue = ParseHexToWpf(config.OverlayFixedColorHex);
+        string tooltip = $"Respuesta de texto:\n{text}\n(Clic derecho: copiar texto • Arrastrar para mover)";
 
-        LettersPanel.Children.Clear();
+        SetBadge("T", 19, blue, WpfBrushes.White, tooltip);
+    }
 
+    private void ShowMultipleChoice(IReadOnlyList<char> letters, AppConfig config)
+    {
         if (letters.Count == 0)
         {
-            ShowWaiting("—");
+            SetBadge("—", 19, WpfColor.FromRgb(24, 24, 24), new SolidBrush(WpfColor.FromRgb(160, 160, 160)),
+                "CLIP-ANS: Sin opciones detectadas");
             return;
         }
 
-        bool fixedColor = config.OverlayFixedColor;
-        WpfColor fixedBlue = ParseHexToWpf(config.OverlayFixedColorHex);
+        string lettersStr = string.Concat(letters);
 
-        foreach (var letter in letters)
+        // Font size scales so multiple letters fit inside the 38px circle:
+        // 1 letter: 19pt, 2 letters: 14pt, 3 letters: 11.5pt, 4+ letters: 9.5pt
+        double fontSize = lettersStr.Length switch
         {
-            var key = letter.ToString();
-            WpfColor bgColor;
-            WpfBrush textBrush;
+            1 => 19,
+            2 => 14,
+            3 => 11.5,
+            _ => 9.5
+        };
 
-            if (fixedColor)
-            {
-                bgColor   = fixedBlue;
-                textBrush = WpfBrushes.White;
-            }
-            else
-            {
-                var hex = config.ColorMap.TryGetValue(key, out var h) ? h : "#1E88E5";
-                bgColor   = ParseHexToWpf(hex);
-                textBrush = GetContrastingBrush(bgColor);
-            }
+        WpfColor bgColor;
+        WpfBrush textBrush;
 
-            var badge = new Border
-            {
-                Width           = 38,
-                Height          = 38,
-                CornerRadius    = new CornerRadius(19),
-                BorderThickness = new Thickness(0), // No white border
-                Margin          = new Thickness(2, 0, 2, 0),
-                Background      = new SolidBrush(bgColor),
-                Effect          = new DropShadowEffect
-                {
-                    BlurRadius  = 5,
-                    ShadowDepth = 1,
-                    Opacity     = 0.45,
-                    Color       = WpfColors.Black,
-                }
-            };
-
-            var text = new TextBlock
-            {
-                Text                = key,
-                FontFamily          = new WpfFontFamily("Segoe UI, Consolas, Arial"),
-                FontSize            = 19,
-                FontWeight          = FontWeights.Bold,
-                Foreground          = textBrush,
-                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                VerticalAlignment   = VerticalAlignment.Center,
-                TextAlignment       = TextAlignment.Center,
-            };
-
-            badge.Child = text;
-            LettersPanel.Children.Add(badge);
+        if (config.OverlayFixedColor)
+        {
+            bgColor   = ParseHexToWpf(config.OverlayFixedColorHex);
+            textBrush = WpfBrushes.White;
         }
+        else
+        {
+            // If single letter, use its assigned color; if multiple letters, use the primary letter's color
+            string primaryKey = letters[0].ToString();
+            string hex = config.ColorMap.TryGetValue(primaryKey, out var h) ? h : "#1E88E5";
+            bgColor   = ParseHexToWpf(hex);
+            textBrush = GetContrastingBrush(bgColor);
+        }
+
+        string tooltip = $"Respuesta: {lettersStr}\n(Clic derecho para copiar • Arrastrar para mover)";
+        SetBadge(lettersStr, fontSize, bgColor, textBrush, tooltip);
     }
 
-    private void ShowDirectText(string text)
+    private void SetBadge(string text, double fontSize, WpfColor bgColor, WpfBrush textBrush, string tooltip)
     {
-        LettersPanel.Visibility = Visibility.Collapsed;
-        TextPanel.Visibility    = Visibility.Visible;
-        WaitingBadge.Visibility = Visibility.Collapsed;
-        DirectAnswerText.Text   = string.IsNullOrWhiteSpace(text) ? "—" : text;
-    }
-
-    private void ShowWaiting(string symbol, WpfBrush? textBrush = null)
-    {
-        LettersPanel.Visibility = Visibility.Collapsed;
-        TextPanel.Visibility    = Visibility.Collapsed;
-        WaitingBadge.Visibility = Visibility.Visible;
-        WaitingText.Text        = symbol;
-        WaitingText.Foreground  = textBrush ?? WpfBrushes.White;
+        BadgeText.Text       = text;
+        BadgeText.FontSize   = fontSize;
+        BadgeText.Foreground = textBrush;
+        CircleBadge.Background = new SolidBrush(bgColor);
+        RootContainer.ToolTip  = tooltip;
     }
 
     // ── Animations ─────────────────────────────────────────────────────────────
@@ -266,15 +248,15 @@ public partial class OverlayWindow : Window
         if (state.IsDirectAnswer && !string.IsNullOrWhiteSpace(state.LastDirectAnswer))
         {
             CopyAnswerMenuItem.IsEnabled = true;
-            string preview = state.LastDirectAnswer.Length > 18
-                ? state.LastDirectAnswer[..18] + "…"
+            string preview = state.LastDirectAnswer.Length > 20
+                ? state.LastDirectAnswer[..20] + "…"
                 : state.LastDirectAnswer;
-            CopyAnswerMenuItem.Header = $"📋 Copiar: \"{preview}\"";
+            CopyAnswerMenuItem.Header = $"📋 Copiar texto: \"{preview}\"";
         }
         else if (!state.IsDirectAnswer && state.LastAnswers.Count > 0)
         {
             CopyAnswerMenuItem.IsEnabled = true;
-            CopyAnswerMenuItem.Header = $"📋 Copiar: {string.Join(", ", state.LastAnswers)}";
+            CopyAnswerMenuItem.Header = $"📋 Copiar respuesta ({string.Join(",", state.LastAnswers)})";
         }
         else
         {
