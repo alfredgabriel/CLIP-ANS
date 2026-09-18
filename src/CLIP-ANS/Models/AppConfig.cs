@@ -45,6 +45,9 @@ public class AppConfig
     [JsonPropertyName("show_overlay")]
     public bool ShowOverlay { get; set; } = false;
 
+    [JsonPropertyName("overlay_opacity")]
+    public double OverlayOpacity { get; set; } = 0.90;
+
     // ── Color map: letter (A-Z) → hex color string ───────────────────────────
     [JsonPropertyName("color_map")]
     public Dictionary<string, string> ColorMap { get; set; } = new()

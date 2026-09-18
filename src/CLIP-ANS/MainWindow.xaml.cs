@@ -49,6 +49,7 @@ public partial class MainWindow : Window
 {
     public event Action<AppConfig>? ConfigChanged;
     public event Action<AppConfig>? OverlayToggleRequested;
+    public event Action<double>? OverlayOpacityChanged;
 
     private readonly ConfigService _configService = new();
     private AppConfig _config = new();
@@ -180,6 +181,11 @@ public partial class MainWindow : Window
         ScreenshotToggle.IsChecked    = _config.DetectScreenshots;
         NotificationsToggle.IsChecked = _config.ShowNotifications;
         OverlayToggleBtn.IsChecked    = _config.ShowOverlay;
+        OverlayDashboardToggle.IsChecked = _config.ShowOverlay;
+
+        int opacityPct = Math.Clamp((int)Math.Round(_config.OverlayOpacity * 100), 10, 100);
+        OverlayOpacitySlider.Value = opacityPct;
+        OverlayOpacityLabel.Text   = $"{opacityPct}%";
 
         // Legend
         BuildLegendItems();
@@ -570,10 +576,16 @@ public partial class MainWindow : Window
     public void SyncTogglesFromConfig(AppConfig config)
     {
         _config = config;
-        TextDetectionToggle.IsChecked = config.DetectText;
-        ScreenshotToggle.IsChecked    = config.DetectScreenshots;
-        NotificationsToggle.IsChecked = config.ShowNotifications;
-        OverlayToggleBtn.IsChecked    = config.ShowOverlay;
+        TextDetectionToggle.IsChecked    = config.DetectText;
+        ScreenshotToggle.IsChecked       = config.DetectScreenshots;
+        NotificationsToggle.IsChecked    = config.ShowNotifications;
+        OverlayToggleBtn.IsChecked       = config.ShowOverlay;
+        OverlayDashboardToggle.IsChecked = config.ShowOverlay;
+
+        int opacityPct = Math.Clamp((int)Math.Round(config.OverlayOpacity * 100), 10, 100);
+        OverlayOpacitySlider.Value = opacityPct;
+        OverlayOpacityLabel.Text   = $"{opacityPct}%";
+
         UpdateStatusChip();
     }
 
@@ -581,7 +593,28 @@ public partial class MainWindow : Window
     {
         bool nowOn = OverlayToggleBtn.IsChecked == true;
         _config.ShowOverlay = nowOn;
+        OverlayDashboardToggle.IsChecked = nowOn;
         OverlayToggleRequested?.Invoke(_config);
+    }
+
+    private void OverlayDashboardToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_initialized || _config == null) return;
+        bool nowOn = OverlayDashboardToggle.IsChecked == true;
+        _config.ShowOverlay = nowOn;
+        OverlayToggleBtn.IsChecked = nowOn;
+        OverlayToggleRequested?.Invoke(_config);
+    }
+
+    private void OverlayOpacitySlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_initialized || _config == null) return;
+        int percent = (int)Math.Round(e.NewValue);
+        _config.OverlayOpacity = percent / 100.0;
+        if (OverlayOpacityLabel != null)
+            OverlayOpacityLabel.Text = $"{percent}%";
+        OverlayOpacityChanged?.Invoke(_config.OverlayOpacity);
+        _configService.Save(_config);
     }
 
     // ── Event handlers — Add / Delete color option ────────────────────────────

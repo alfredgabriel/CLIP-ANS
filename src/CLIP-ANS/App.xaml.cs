@@ -73,8 +73,9 @@ public partial class App : System.Windows.Application
 
             // 3. Create main window (hidden by default unless first run)
             _mainWindow = new MainWindow();
-            _mainWindow.ConfigChanged         += OnConfigChanged;
+            _mainWindow.ConfigChanged          += OnConfigChanged;
             _mainWindow.OverlayToggleRequested += OnMainWindowOverlayToggled;
+            _mainWindow.OverlayOpacityChanged  += OnMainWindowOverlayOpacityChanged;
 
             bool firstRun = !_configService.ConfigExists();
             if (firstRun || config.ShowWindowOnStart)
@@ -123,6 +124,7 @@ public partial class App : System.Windows.Application
         AppState.Instance.Config = newConfig;
         _configService.Save(newConfig);
         RebuildAIClient(newConfig);
+        _overlay?.UpdateFromConfig(newConfig);
         // Restart watcher with new poll interval / min length
         _watcher?.Stop();
         StartWatcher();
@@ -148,6 +150,15 @@ public partial class App : System.Windows.Application
         _overlay?.SetVisible(newConfig.ShowOverlay);
         // Keep tray icon config in sync (it reads from _state.Config)
         AppState.Instance.Config = newConfig;
+    }
+
+    private void OnMainWindowOverlayOpacityChanged(double opacity)
+    {
+        if (AppState.Instance.Config is { } cfg)
+        {
+            cfg.OverlayOpacity = opacity;
+        }
+        _overlay?.SetOpacity(opacity);
     }
 
     // ── Global hotkey (Ctrl+Shift+Space) ──────────────────────────────────────

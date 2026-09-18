@@ -238,9 +238,44 @@
                         <CheckBox x:Name="NotificationsToggle"
                                   Style="{StaticResource BrutalistCheckBox}"
                                   Content="NOTIFICACIONES DE WINDOWS"
-                                  Margin="0,0,0,6"
+                                  Margin="0,0,0,3"
                                   Checked="NotificationsToggle_Changed"
                                   Unchecked="NotificationsToggle_Changed"/>
+
+                        <!-- Overlay toggle -->
+                        <CheckBox x:Name="OverlayDashboardToggle"
+                                  Style="{StaticResource BrutalistCheckBox}"
+                                  Content="OVERLAY FLOTANTE (F11)"
+                                  Margin="0,0,0,6"
+                                  Checked="OverlayDashboardToggle_Changed"
+                                  Unchecked="OverlayDashboardToggle_Changed"/>
+
+                        <!-- Overlay Opacity -->
+                        <TextBlock Text="OPACIDAD DEL OVERLAY (%)" Style="{StaticResource SectionLabel}" Margin="0,2,0,1"/>
+                        <Grid Margin="0,0,0,6" HorizontalAlignment="Stretch">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="75"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="OverlayOpacitySlider"
+                                    Grid.Column="0"
+                                    Minimum="10" Maximum="100"
+                                    Value="90"
+                                    TickFrequency="5"
+                                    IsSnapToTickEnabled="True"
+                                    ValueChanged="OverlayOpacitySlider_Changed"
+                                    HorizontalAlignment="Stretch"
+                                    Foreground="#FFFFFF"
+                                    Background="#333333"/>
+                            <TextBlock x:Name="OverlayOpacityLabel"
+                                       Grid.Column="1"
+                                       Style="{StaticResource ValueText}"
+                                       Margin="8,0,0,0"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"
+                                       FontSize="11"
+                                       Text="90%"/>
+                        </Grid>
 
                         <!-- Min text length -->
                         <TextBlock Text="LONGITUD MÍNIMA DE TEXTO" Style="{StaticResource SectionLabel}" Margin="0,2,0,1"/>
