@@ -45,12 +45,58 @@
                         Margin="8,4,0,0" VerticalAlignment="Top"/>
             </StackPanel>
 
-            <TextBlock Grid.Column="2"
-                       Text="AI QUIZ COPILOT — v1.1"
-                       FontSize="11"
-                       Foreground="#777777"
-                       FontFamily="{StaticResource MonoFont}"
-                       VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <!-- OVERLAY toggle button -->
+                <ToggleButton x:Name="OverlayToggleBtn"
+                              Content="⬛ OVERLAY"
+                              FontFamily="{StaticResource MonoFont}"
+                              FontSize="10"
+                              FontWeight="Bold"
+                              Foreground="#555555"
+                              Background="Transparent"
+                              BorderBrush="#333333"
+                              BorderThickness="1"
+                              Padding="8,4"
+                              Margin="0,0,12,0"
+                              Cursor="Hand"
+                              VerticalAlignment="Center"
+                              Click="OverlayToggleBtn_Click">
+                    <ToggleButton.Style>
+                        <Style TargetType="ToggleButton">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Bd"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#00E6FF"/>
+                                                <Setter Property="Foreground" Value="#00E6FF"/>
+                                                <Setter Property="Content" Value="🟦 OVERLAY"/>
+                                            </Trigger>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#111111"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ToggleButton.Style>
+                </ToggleButton>
+
+                <TextBlock Text="AI QUIZ COPILOT — v1.1"
+                           FontSize="11"
+                           Foreground="#777777"
+                           FontFamily="{StaticResource MonoFont}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+
         </Grid>
 
         <!-- ══════ 2-COLUMN DASHBOARD (RESPONSIVE, NO SCROLLBAR) ══════ -->

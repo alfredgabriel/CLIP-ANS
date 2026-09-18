@@ -19,6 +19,7 @@ public sealed class TrayManager : IDisposable
     public event Action? OpenRequested;
     public event Action? ExitRequested;
     public event Action<AppConfig>? ConfigToggled;
+    public event Action<AppConfig>? OverlayToggled;
 
     public TrayManager(AppState state)
     {
@@ -244,6 +245,21 @@ public sealed class TrayManager : IDisposable
             }
         };
 
+        var itemOverlay = new ToolStripMenuItem("OVERLAY FLOTANTE")
+        {
+            CheckOnClick = true,
+            ForeColor    = Color.FromArgb(0, 230, 255),
+            Font         = new Font("Consolas", 9f, FontStyle.Regular),
+        };
+        itemOverlay.Click += (_, _) =>
+        {
+            if (_state.Config is { } cfg)
+            {
+                cfg.ShowOverlay = itemOverlay.Checked;
+                OverlayToggled?.Invoke(cfg);
+            }
+        };
+
         var itemExit = new ToolStripMenuItem("SALIR")
         {
             ForeColor = Color.FromArgb(255, 80, 80),
@@ -272,6 +288,7 @@ public sealed class TrayManager : IDisposable
                 itemDetectText.Checked        = cfg.DetectText;
                 itemDetectScreenshots.Checked = cfg.DetectScreenshots;
                 itemNotifications.Checked     = cfg.ShowNotifications;
+                itemOverlay.Checked           = cfg.ShowOverlay;
             }
         };
 
@@ -283,6 +300,8 @@ public sealed class TrayManager : IDisposable
             itemDetectText,
             itemDetectScreenshots,
             itemNotifications,
+            new ToolStripSeparator(),
+            itemOverlay,
             new ToolStripSeparator(),
             itemExit
         ]);

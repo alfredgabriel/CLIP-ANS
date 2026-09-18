@@ -41,6 +41,10 @@ public class AppConfig
     [JsonPropertyName("show_window_on_start")]
     public bool ShowWindowOnStart { get; set; } = true;
 
+    // ── Overlay ──────────────────────────────────────────────────────────────
+    [JsonPropertyName("show_overlay")]
+    public bool ShowOverlay { get; set; } = false;
+
     // ── Color map: letter (A-Z) → hex color string ───────────────────────────
     [JsonPropertyName("color_map")]
     public Dictionary<string, string> ColorMap { get; set; } = new()

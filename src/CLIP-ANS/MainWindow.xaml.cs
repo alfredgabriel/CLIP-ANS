@@ -48,6 +48,7 @@ public class LegendItem
 public partial class MainWindow : Window
 {
     public event Action<AppConfig>? ConfigChanged;
+    public event Action<AppConfig>? OverlayToggleRequested;
 
     private readonly ConfigService _configService = new();
     private AppConfig _config = new();
@@ -178,6 +179,7 @@ public partial class MainWindow : Window
         TextDetectionToggle.IsChecked = _config.DetectText;
         ScreenshotToggle.IsChecked    = _config.DetectScreenshots;
         NotificationsToggle.IsChecked = _config.ShowNotifications;
+        OverlayToggleBtn.IsChecked    = _config.ShowOverlay;
 
         // Legend
         BuildLegendItems();
@@ -571,7 +573,15 @@ public partial class MainWindow : Window
         TextDetectionToggle.IsChecked = config.DetectText;
         ScreenshotToggle.IsChecked    = config.DetectScreenshots;
         NotificationsToggle.IsChecked = config.ShowNotifications;
+        OverlayToggleBtn.IsChecked    = config.ShowOverlay;
         UpdateStatusChip();
+    }
+
+    private void OverlayToggleBtn_Click(object sender, RoutedEventArgs e)
+    {
+        bool nowOn = OverlayToggleBtn.IsChecked == true;
+        _config.ShowOverlay = nowOn;
+        OverlayToggleRequested?.Invoke(_config);
     }
 
     // ── Event handlers — Add / Delete color option ────────────────────────────

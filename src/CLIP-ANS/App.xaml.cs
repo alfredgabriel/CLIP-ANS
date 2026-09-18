@@ -1,8 +1,10 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using QuizHelper.AI;
 using QuizHelper.Core;
 using QuizHelper.Models;
+using QuizHelper.Overlay;
 using QuizHelper.Tray;
 
 namespace QuizHelper;
@@ -15,14 +17,28 @@ namespace QuizHelper;
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    // ── Win32 global hotkey ───────────────────────────────────────────────────
+    [DllImport("user32.dll")]
+    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    [DllImport("user32.dll")]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    private const int    HotkeyId      = 9001;
+    private const uint   MOD_CTRL_SHIFT = 0x0003; // MOD_CONTROL | MOD_SHIFT
+    private const uint   VK_SPACE       = 0x20;
+    private const int    WM_HOTKEY      = 0x0312;
+
+    private HwndSource?  _hwndSource;
+
     [DllImport("shell32.dll", SetLastError = true)]
     private static extern void SetCurrentProcessExplicitAppUserModelID([MarshalAs(UnmanagedType.LPWStr)] string AppID);
 
-    private TrayManager?    _tray;
-    private MainWindow?     _mainWindow;
+    private TrayManager?      _tray;
+    private MainWindow?       _mainWindow;
+    private OverlayWindow?    _overlay;
     private ClipboardWatcher? _watcher;
-    private IAIClient?      _aiClient;
-    private ConfigService   _configService = new();
+    private IAIClient?        _aiClient;
+    private ConfigService     _configService = new();
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -57,16 +73,26 @@ public partial class App : System.Windows.Application
 
             // 3. Create main window (hidden by default unless first run)
             _mainWindow = new MainWindow();
-            _mainWindow.ConfigChanged += OnConfigChanged;
+            _mainWindow.ConfigChanged         += OnConfigChanged;
+            _mainWindow.OverlayToggleRequested += OnMainWindowOverlayToggled;
 
             bool firstRun = !_configService.ConfigExists();
             if (firstRun || config.ShowWindowOnStart)
                 ShowMainWindow();
 
-            // 4. Initialize AI client and clipboard watcher
+            // 4. Create overlay window (hidden until user enables it)
+            _overlay = new OverlayWindow();
+            _tray.OverlayToggled += OnTrayOverlayToggled;
+            if (config.ShowOverlay)
+                _overlay.SetVisible(true);
+
+            // 5. Register global hotkey Ctrl+Shift+Space via a helper WPF window's HWND
+            RegisterGlobalHotkey();
+
+            // 6. Initialize AI client and clipboard watcher
             RebuildAIClient(config);
             StartWatcher();
-            // 5. Silent startup connection check (auto-fixes stale model without user action)
+            // 7. Silent startup connection check (auto-fixes stale model without user action)
             _ = StartupConnectionCheckAsync(config);
         }
         catch (Exception ex)
@@ -106,6 +132,50 @@ public partial class App : System.Windows.Application
     {
         _configService.Save(newConfig);
         _mainWindow?.SyncTogglesFromConfig(newConfig);
+    }
+
+    private void OnTrayOverlayToggled(AppConfig newConfig)
+    {
+        _configService.Save(newConfig);
+        _overlay?.SetVisible(newConfig.ShowOverlay);
+        // Keep main window toggle in sync
+        _mainWindow?.SyncTogglesFromConfig(newConfig);
+    }
+
+    private void OnMainWindowOverlayToggled(AppConfig newConfig)
+    {
+        _configService.Save(newConfig);
+        _overlay?.SetVisible(newConfig.ShowOverlay);
+        // Keep tray icon config in sync (it reads from _state.Config)
+        AppState.Instance.Config = newConfig;
+    }
+
+    // ── Global hotkey (Ctrl+Shift+Space) ──────────────────────────────────────
+
+    private void RegisterGlobalHotkey()
+    {
+        // We need a real HWND. Use a hidden helper window.
+        var helper = new Window { Width = 0, Height = 0, ShowInTaskbar = false,
+                                  WindowStyle = WindowStyle.None, Opacity = 0 };
+        helper.Show();
+        _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(helper).Handle);
+        _hwndSource?.AddHook(WndProc);
+        RegisterHotKey(_hwndSource!.Handle, HotkeyId, MOD_CTRL_SHIFT, VK_SPACE);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_HOTKEY && wParam.ToInt32() == HotkeyId && _overlay is not null)
+        {
+            bool nowVisible = _overlay.Toggle();
+            if (AppState.Instance.Config is { } cfg)
+            {
+                cfg.ShowOverlay = nowVisible;
+                _configService.Save(cfg);
+            }
+            handled = true;
+        }
+        return IntPtr.Zero;
     }
 
     // ── AI client factory ─────────────────────────────────────────────────────
@@ -337,6 +407,11 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_hwndSource is not null)
+        {
+            UnregisterHotKey(_hwndSource.Handle, HotkeyId);
+            _hwndSource.Dispose();
+        }
         _watcher?.Dispose();
         _tray?.Dispose();
         base.OnExit(e);
